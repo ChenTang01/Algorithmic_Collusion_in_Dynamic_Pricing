@@ -1,0 +1,164 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{graphicx,psfrag,epsf}
+\usepackage{enumerate}
+\usepackage{natbib}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+
+%\pdfminorversion=4
+% NOTE: To produce blinded version, replace "0" with "1" below.
+\newcommand{\blind}{0}
+
+% DON'T change margins - should be 1 inch all around.
+\addtolength{\oddsidemargin}{-.5in}%
+\addtolength{\evensidemargin}{-.5in}%
+\addtolength{\textwidth}{1in}%
+\addtolength{\textheight}{1.3in}%
+\addtolength{\topmargin}{-.8in}%
+
+\begin{document}
+
+%\bibliographystyle{natbib}
+
+\def\spacingset#1{\renewcommand{\baselinestretch}%
+  {#1}\small\normalsize} \spacingset{1}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\if0\blind
+  {
+    \title{\bf Survey of Algorithmic Collusion: The Convergence of Multi-agent Dynamic Pricing using Reinforcement Learning}
+    \author{Chen Tang\thanks{
+        ChenTang@link.cuhk.edu.cn\\
+        \textcolor{red}{This is the initial draft of this survey.} The original plan involves creating an interactive Jupyter book that includes reproductions of seven top-tier papers on this topic. However, several challenges have arisen during the writing process. Firstly, the reproduction of \cite{calvano2020artificial} demands substantial computational resources beyond the capacity of my PC, and the reproduction results of \cite{hansen2021frontiers} do not align with the authors' reported outcomes. Secondly, the papers within the management science field are highly mathematical, requiring a considerable amount of time to understand (The leading scholar in this topic is a PhD in math).\\
+        \textcolor{red}{The topic of this paper matches my research interests. I will continue writing and completing the reproduction in the next several weeks. The finalized work will be made available on my personal homepage.}}\hspace{.2cm}\\
+       Chinese University of Hongkong, Shenzhen, China}
+    \date{December 17, 2023}
+    \maketitle
+  } \fi
+
+\if1\blind
+  {
+    \bigskip
+    \bigskip
+    \bigskip
+    \begin{center}
+      {\LARGE\bf Title}
+    \end{center}
+    \medskip
+  } \fi
+
+\bigskip
+\begin{abstract}
+    This paper presents a comprehensive survey on algorithmic collusion within the domain of multi-agent dynamic pricing using RL algorithms. Exploring a range of top-tier papers. This survey serves as a valuable resource for researchers and practitioners seeking to navigate the complexities of algorithmic collusion in multi-agent systems. This survey also provides some useful directions for future study. 
+\end{abstract}
+
+\section{Introduction}
+
+Dynamic pricing, a popular topic in management science literature, studies the evolution of pricing strategies over time and their impact on market dynamics (\cite{den2015dynamic}). This research area has gained substantial attention due to its relevance in adapting pricing models to changing market conditions, technological advancements, and shifts in consumer behavior. \\
+
+The classic dynamic pricing literature often assumes a monopoly market, where a firm (agent) learns the unknown demand functions (environment) using parametric or non-parametric estimation methods (\cite{robinson1975dynamic}). After the 1980s, scholars extended the model to a much wider range of conditions such as considering finite inventory (\cite{varian1980model}), strategic consumers (\cite{levin2009dynamic}), dynamic environment parameters (\cite{keskin2022data}), model misspecification (\cite{besbes2015surprising}), and competitions (\cite{gallego2014dynamic}). Prior to applying reinforcement learning in multi-agent games, earlier studies have employed bandit algorithms to learn the environment within single-agent games (\cite{misra2019dynamic}).\\
+
+In addition to the field of management science, dynamic pricing is studied in various other disciplines. For instance, in economics, researchers examine the welfare implications of dynamic pricing (\cite{williams2022welfare}). In statistics, the focus is on estimation techniques (\cite{bertsimas2006dynamic}), while in computer science, the emphasis lies on developing algorithms for dynamic pricing of online services (\cite{ho2013adaptive}, \cite{markgraf2023safe}). \\
+
+Because computer science researchers constitute the primary audience for this paper, the language and descriptions for some specific terms in this paper are adjusted to facilitate easy comprehension for computer scientists. It is assumed that readers have a basic understanding of reinforcement learning algorithms, so this paper won't spend much time on algorithmic introductions. I recommend reading \cite{sutton2018reinforcement} as a reference.\\
+
+This paper focuses on the convergence outcome in multi-agent dynamic pricing and this topic is relatively novel (in the sense of economics and business fields). It was first proposed by \cite{calvano2019algorithmic}\footnote{Prior to this paper, discussions on algorithmic collusion have taken place in other disciplines. I recommend readers to read Section 1 of \cite{loots2023data} for further reference.}, in which the authors discovered that when both firms (agents) employ the Q-learning algorithm to dynamically set prices in an infinite two-agent (duopoly) game, their pricing decisions converge towards supra-competitive prices, resembling the pricing decision set by a single agent.\\
+
+Supra-competitive price denotes a scenario where, despite the involvement of two agents in the game, the dynamics mimic a situation as if only one single agent is simultaneously determining the prices for both, which is also called the \textit{collusive} outcome. In most cases, collusive prices tend to surpass competitive prices, hence the term ``supra'', posing potential harm to consumers' welfare. Detailed explanations and rigorous definitions of these terminologies will be provided in Section \ref{sec:progress}.\\
+
+Shortly following the paper published in 2019, the same research team carried out additional numerical investigations (refer to \cite{calvano2020artificial}), unveiling new robust findings that garnered attention. Over the subsequent years from 2021 to 2023, notable papers in the realms of management science and economics appear. \\
+
+The rest of the paper is organized as follows: in section \ref{sec:model}, I will illustrate the model setting of multi-agent dynamic pricing, as well as a more rigorous definition of the \textit{competitive} and \textit{collusive} outcome; In section \ref{sec:progress}, I will introduce several research papers published in top-tier journals, categorizing them into two domains: economics and management science; In Section \ref{sec:conclusion}, a summary of the preceding content will be provided, along with an illustration of future steps.\\
+
+\section{General Model for Multi-Agent Dynamic Pricing}\label{sec:model}
+
+In various papers, the model settings may vary. Here, I provide the model that is most likely to be applied in future research. The general model is mainly based on \cite{cooper2015learning}, \cite{meylahn2022learning}, and \cite{den2023mathematical}. These researches refine both the description of the data generating process (DGP) and the definition of algorithmic collusion.\\
+
+We assume there are $k$ agents (firms) in the market selling a homogeneous product without considering the inventory capacity and the costs. Typically, $k=2$, forming a duopoly market. At each time $t$, each agent $i$ poses an action (price) $p_{i,t}\in [0,p_i^{max}]$ and gets a demand $d_{i,t}$ from the environment. The environment is often characterized through a parametric formula: $d_{i}(\boldsymbol{p}_t;\boldsymbol{\theta})$, where $\boldsymbol{p}_t=\{p_{1,t},\cdots,p_{k,t}\}$ is the action vector, and $\boldsymbol{\theta}$ is the parameter of the demand function that is \textbf{unkown} to the agents. \\
+
+The reward (profit) $r_i$ for each agent is collectively determined by both the action and demand. Based on the stochasticity of the reward, we can categorize the reward into three groups: 
+\begin{enumerate}
+    \item \textit{Deterministic}: $r_{i,t}=d_{i}(\boldsymbol{p}_t;\boldsymbol{\theta}) \cdot p_{i,t}$. This is an unrealistic assumption under which the reward remains static given the actions. The baseline model in \cite{calvano2020artificial} adopted this approach;
+    \item \textit{Stochastic on Demand}: $r_{i,t}=(d_{i}(\boldsymbol{p}_t;\boldsymbol{\theta}) + \epsilon_{i,t}) \cdot p_{i,t}$.
+    \item \textit{Stochastic on Reward}: $r_{i,t}=d_{i}(\boldsymbol{p}_t;\boldsymbol{\theta}) \cdot p_{i,t} + \epsilon_{i,t}$. This one is the most popular setting. With a boundary on $p_{i,t}$, this reward can be equivalent to reward 2. 
+\end{enumerate}
+
+The $\epsilon_{i,t}$ is a martingale difference noise satisfying:
+\begin{align*}
+    \mathbb{E}[\varepsilon_{i,t+1}\mid\mathcal{F}^{t}]&=0, \text{with probability 1};\\
+    \exists M \text{ such that } \mathbb{E}[(\varepsilon_{i,t+1})^2\mid\mathcal{F}^{t}]& \le M, \text{with probability 1}.
+\end{align*}
+
+Here, $\mathcal{F}^t$ represents the filtration at time $t$, encompassing all the past $\epsilon$ and $\boldsymbol{p}$. These two constraints ensure the random term has a zero mean and finite variance.  The structure of the demand function $d_{i}(\boldsymbol{p}_t;\boldsymbol{\theta})$ will be elaborated upon following the introduction of algorithmic collusion and the game's equilibrium.\\
+
+From a reinforcement learning perspective, readers may wonder how to define the states of the game. There are two approaches:
+\begin{enumerate}
+    \item We assume the agents can observe the opponents' historical prices ($\boldsymbol{p}_{0}, \cdots, \boldsymbol{p}_{t-1}$) and utilize prices from the last $m$ epochs ($\boldsymbol{p}_{t-m}, \cdots, \boldsymbol{p}_{t-1}$) to construct the states;
+    \item We assume the agents can only use their own historical information, treating the whole process as a bandit game (state space = 1).
+\end{enumerate}
+
+In all prior studies, opponents' prices at time $t$ and their rewards over all time periods are assumed to be unobservable.\\
+
+After agent $i$ receives $r_{i,t}$, the bandit values or the state-action function is updated using the reinforcement learning algorithm employed by the agent, determining the action $p_{t+1}$ for the subsequent epoch. The game epoch is considered sufficiently long and can be regarded as infinite.\\
+
+Now, I will introduce algorithmic collusion and various cases of equilibrium. Let us reconsider the game described above, but this time assuming that the structure of the game (the reward function) is common knowledge\footnote{common knowledge is terminology in game theory, referring to a situation where all players in a game are not only aware of certain information but are also aware that every player is aware of this information, and this knowledge continues recursively. In other words, it's not just about knowing something, but also knowing that everyone else knows it, and they know that everyone else knows it, and so on.} among all agents. Without loss of generality, we set $k=2$, establishing a duopoly market. In an ideal market where the two agents can not communicate, each agent maximizes their own reward function, thus leading to the Nash equilibrium price vector $\mathbf{p}^{\mathrm{com}}=(p_{1}^{\mathrm{com}},p_{2}^{\mathrm{com}})\in[0,p_{1}^{\mathrm{max}}]\times [0,p_{1}^{\mathrm{max}}]$ when:
+\begin{align}
+    \mathbb{E}[r_1(p_1^{\mathrm{com}};p_2^{\mathrm{com}}, \boldsymbol{\theta})]&=\max_{p_1\in[0,p_1^{\mathrm{max}}]}\mathbb{E}[r_1(p_1;p_2^{\mathrm{com}},\boldsymbol{\theta})],\mathrm{~and} \\
+    \mathbb{E}[r_2(p_2^{\mathrm{com}};p_1^{\mathrm{com}}, \boldsymbol{\theta})]&=\max_{p_2\in[0,p_2^{\mathrm{max}}]}\mathbb{E}[r_2(p_2;p_1^{\mathrm{com}},\boldsymbol{\theta})]\notag
+\end{align}
+where ``com" stands for ``competitive". \\
+
+There is another circumstance where the agents don't price competitively, but form a cartel to price the way like a monopolist. We call this price collusive, denoted by $\boldsymbol{p}^{col$:
+
+\begin{equation}
+    \mathbf{p}^{\mathrm{col}} := \max_{\mathbf{p}\in[0,p_1^{\max}]\times[0,p_2^{\max}]}\mathbb{E}[r(\mathbf{p};\boldsymbol{\theta})] = \mathbb{E} [r_1(p_1;p_2, \boldsymbol{\theta})]+\mathbb{E} [r_2(p_2;p_1, \boldsymbol{\theta})]
+\end{equation}
+
+Given the game structure (the reward function and all parameters), we can solve the theoretical equilibrium (both collusive and competitive) analytically or numerically. However, for agents unaware of the exact reward function, unless they employ the same function class as the actual Data Generating Process (DGP) and accurately estimate the parameters, these agents may never ascertain the equilibrium prices. This circumstance can arise when agents are unable to observe their opponents' historical actions, and even when the opponents' historical actions are accessible, it remains difficult to give an unbiased estimation.\\
+
+On the other hand, agents are not concerned with the specific theoretical equilibrium prices; rather, their interest lies in determining whether the collusive reward surpasses the competitive reward. When $r_i(\boldsymbol{p^{com}};\boldsymbol{\theta})>r_i(\boldsymbol{p^{col}};\boldsymbol{\theta})$, both agents have no incentive to collude.\\
+
+As a solution, in all papers, it is assumed that the reward function should behave well, such that the following properties hold\footnote{\cite{den2023mathematical} gives an axiomatic description of these properties}:
+
+\begin{itemize}
+    \item $r_i(\boldsymbol{p^{com}};\boldsymbol{\theta})< r_i(\boldsymbol{p^{col}};\boldsymbol{\theta})$;
+    \item $\boldsymbol{p^{com}} < \boldsymbol{p^{col}}$;
+    \item There is a unique maximize for the Nash-equilibrium $\boldsymbol{p^{com}}$ and the collusive price $\boldsymbol{p^{col}}$\footnote{\cite{meylahn2022learning} uses this constraint for fancier mathematical analysis, but this is not a necessary condition in many other papers.}.
+\end{itemize}
+
+These properties ensure the existence of a prisoner's dilemma in the game\footnote{Another definition of collusion is given in \cite{calvano2023algorithmic}}. The research in algorithmic collusion aims to determine how, with the application of various reinforcement learning algorithms under different model settings, the dynamics of the game converge towards either the Nash equilibrium or collusive outcomes.
+
+\section{Current Progress in Algorithmic Collusion} \label{sec:progress}
+
+The story begins with \cite{calvano2019algorithmic} and \cite{calvano2020artificial}. In their papers, they assume Assume there are $n$ different agents, the demand for firm $i$ at time $t$ is:
+\begin{equation}
+    d_{i,t}=\frac{e^{\frac{a_i-p_{i,t}}\mu}}{\sum_{j=1}^ne^{\frac{a_j-p_{j,\iota}}\mu}+e^{\frac{a_0}\mu}}，
+\end{equation}
+
+In their baseline model, there is no stochasticity in the rewards. They characterize the agents' action spaces as discrete: For each agent (firm), we can compute its Bertrand-Nash equilibrium (one-shot game) $p^N$ and the monopoly price $p^M$. Then, taking the interval $[p^{com}-\xi(p^{col}-p^{com}), p^{col}+\xi(p^{col}-p^{com})], \xi>0$, and splitting the interval into $m$ discrete prices, we can get the action space for each agent. The state space is defined as the prices in the last $m$ epochs. Each agent utilizes the Q-learning algorithm to make decisions. \\
+
+This paper discovered that when each agent uses Q-learning algorithms, there's a chance the game might end up with a collusive outcome, even if the agents don't communicate. \\
+
+Building upon previous studies, \cite{hettich2021algorithmic} uses the same model, and finds that deep RL algorithm can result in the same collusive outcomes. \cite{klein2021autonomous} adopts an alternative demand function and observes a similar outcome with Q-learning, leading to collusive results.\\
+
+Subsequently, \cite{hansen2021frontiers} extends the discussion to the management science domain and discovers that employing a tuned UCB algorithm can lead the system dynamics to converge towards a collusive outcome. A significant contribution in the management science field comes from Arnold V. den Boer, whose research demonstrates the existence of certain online learning algorithms that asymptotically drive the system dynamics towards collusion with probability 1. (\cite{meylahn2022learning}, \cite{loots2023data}). \\
+
+The most recent research, conducted by \cite{abada2023artificial}, delves into whether collusion results from a lack of exploration or a genuine understanding of supra-outcomes. Their findings indicate that apparent collusion may stem from imperfect exploration rather than excessive algorithmic sophistication. Moreover, they demonstrate that a regulator could effectively shape the market towards socially desirable outcomes by enforcing decentralized learning or intervening appropriately during the learning process.
+
+\section{Conclusions} \label{sec:conclusion}
+
+Here, I provide several potential research directions:\\
+
+First, the mechanism behind collusion remains unclear. Restricting the game to a finite setting could offer clarity in understanding this phenomenon, potentially shedding light on exploration in reinforcement learning theory.
+
+Second, in the realm of dynamic pricing, there is ample opportunity for further exploration by tweaking the model settings. This could involve incorporating factors like incorporating inventory constraints or adjusting environmental parameters over time.
+
+\newpage
+\spacingset{1.45} 
+\bibliographystyle{apalike}
+\bibliography{reference}
+\end{document}
