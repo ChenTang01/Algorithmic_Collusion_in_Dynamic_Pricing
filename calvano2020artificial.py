@@ -21,7 +21,7 @@ if __name__ == '__main__':
             matrix_delta[ia, ib] = delta 
             t1 = time.time() - t0
             print(f"The delta is {delta}, the calculation takes {t1} seconds.")
-    np.save('calvano_matrix_delta.npy', matrix_delta)
+    np.save('data/calvano_matrix_delta.npy', matrix_delta)
     print('Done!')
     
     

@@ -14,9 +14,9 @@ class Calvano_env():
         self.agent1_info = agent1_info
         self.agent2_info = agent2_info
         self.other_info = other_info
-        self.rewards_log = deque(maxlen=100000)
-        self.actions_log = []
-        self.prices_log = []
+        self.rewards_log = deque(maxlen=100000) # [] in the notebook
+        self.actions_log = deque(maxlen=100000) # [] in the notebook
+        self.prices_log = deque(maxlen=100000) # [] in the notebook
         self.action_spaces = None
         self.nash = None
         self.collusion = None
@@ -38,9 +38,9 @@ class Calvano_env():
         
     def step(self, actions, converges):
         converge = False
-        #self.actions_log.append(actions)
+        self.actions_log.append(actions)
         prices = self.action_spaces[0][actions[0]], self.action_spaces[1][actions[1]]
-        #self.prices_log.append(prices)
+        self.prices_log.append(prices)
         rewards = self.execute(prices)
         self.rewards_log.append(rewards)
         states = (self.other_info['m']*actions[0] + actions[1], self.other_info['m']*actions[1] + actions[0])
@@ -100,6 +100,17 @@ class Calvano_env():
         profits = np.mean(np.sum(self.rewards_log, axis=1))
         Delta = (profits - nash) / (collusion - nash)
         self.Delta = Delta
+        """
+        #original version in the notebook
+        nash = np.sum(self.execute(self.nash))
+        collusion = np.sum(self.execute(self.collusion))
+        profits = np.sum(self.rewards_log, axis=1)
+        cum_profits = np.cumsum(profits) / np.arange(1, len(profits) + 1)
+        delta = (profits - nash) / (collusion - nash)
+        Delta = (cum_profits - nash) / (collusion - nash)
+        self.delta = delta
+        self.Delta = Delta
+        """
 
     def plot(self):
         self.cal_Delta()
