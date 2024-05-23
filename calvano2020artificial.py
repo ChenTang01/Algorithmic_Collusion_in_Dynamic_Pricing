@@ -1,6 +1,5 @@
 import numpy as np
 np.random.seed(93)
-import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from env import Calvano_env, Calvano_agent
 from env import Calvano_simulate as simulate

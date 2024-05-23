@@ -191,3 +191,81 @@ def Calvano_simulate(alpha, beta):
     env.cal_Delta()
     return env.Delta
 
+class Hansen_env():
+
+    def __init__(self, info):
+        """
+        The input parameters info should be dictionary.
+        info should contain keys: 'alpha', 'beta', 'gamma', 'delta'
+        """
+        self.info = info
+        self.rewards_log = deque(maxlen=1000)
+        self.actions_log = deque(maxlen=1000)
+        self.prices_log = deque(maxlen=1000)
+        self.action_spaces = None
+        self.nash = None
+        self.collusion = None
+        self.check()
+        self.initialize()
+    
+    def check(self):
+        keys = ['alpha', 'beta', 'gamma', 'delta']
+        if not all(key in self.info for key in keys):
+            raise ValueError("Incorrect Parameters")
+        
+    def step(self, actions):
+        self.actions_log.append(actions)
+        prices = self.action_spaces[0][actions[0]], self.action_spaces[1][actions[1]]
+        self.prices_log.append(prices)
+        rewards = self.execute(prices)
+        self.rewards_log.append(rewards)
+        return rewards
+    
+    def execute(self, prices):
+        profit1 = (prices[0] * (self.info['alpha']-self.info['beta']*prices[0]+self.info['gamma']*prices[1])) + np.random.uniform(-1/self.info['delta'], 1/self.info['delta'])
+        profit2 = (prices[1] * (self.info['alpha']-self.info['beta']*prices[1]+self.info['gamma']*prices[0])) + np.random.uniform(-1/self.info['delta'], 1/self.info['delta'])
+        return np.maximum(0, (profit1, profit2))
+    
+    def initialize(self):
+        """
+        Compute the nash, collusion prices and the actions spaces.
+        """
+        nash = self.info['alpha'] / (2*self.info['beta']-self.info['gamma']) 
+        self.nash = np.array([nash, nash])
+        collusion = 0.5 * self.info['alpha'] / (self.info['beta']-self.info['gamma']) 
+        self.collusion = np.array([collusion, collusion])
+        self.action_spaces = [np.array([nash, collusion]), np.array([nash, collusion])]
+
+class Hansen_agent:
+    def __init__(self):
+        self.t = 1
+        self.n = np.array([0, 0])
+        self.last_action = None
+        self.mean = np.zeros(2)
+        self.mean2 = np.zeros(2)
+        self.V = np.empty(2)
+        self.UCB = np.empty(2)
+
+    def action(self):
+        action = np.argmax(self.UCB)
+        self.last_action = action
+        return action
+
+    def update(self, reward):
+        self.t += 1
+        self.n[self.last_action] += 1
+        self.mean[self.last_action] += (reward - self.mean[self.last_action]) / (self.n[self.last_action] + 1)  
+        self.mean2[self.last_action] += (reward**2 - self.mean2[self.last_action]) / (self.n[self.last_action] + 1) 
+        self.V = self.mean2 - self.mean**2 + np.sqrt(2*np.log(self.t)/self.n)
+        self.UCB = self.mean + np.sqrt((np.log(self.t)/self.n)*np.minimum(0.25, self.V))
+
+def Hansen_initialize(env, agent1, agent2):
+    action1 = np.random.choice(np.array(2), 2)
+    agent1.last_action, agent2.last_action = action1
+    rewards = env.step((agent1.last_action, agent2.last_action))
+    agent1.update(rewards[0])
+    agent2.update(rewards[1])
+    agent1.last_action, agent2.last_action = 1 - action1
+    rewards = env.step((agent1.last_action, agent2.last_action))
+    agent1.update(rewards[0])
+    agent2.update(rewards[1])
