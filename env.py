@@ -94,26 +94,26 @@ class Calvano_env():
         self.action_spaces = [np.linspace(lower[0], upper[0], self.other_info['m']), 
                             np.linspace(lower[1], upper[1], self.other_info['m'])]
     
-    def cal_Delta(self):
-        nash = np.sum(self.execute(self.nash))
-        collusion = np.sum(self.execute(self.collusion))
-        profits = np.mean(np.sum(self.rewards_log, axis=1))
-        Delta = (profits - nash) / (collusion - nash)
-        self.Delta = Delta
-        """
-        #original version in the notebook
-        nash = np.sum(self.execute(self.nash))
-        collusion = np.sum(self.execute(self.collusion))
-        profits = np.sum(self.rewards_log, axis=1)
-        cum_profits = np.cumsum(profits) / np.arange(1, len(profits) + 1)
-        delta = (profits - nash) / (collusion - nash)
-        Delta = (cum_profits - nash) / (collusion - nash)
-        self.delta = delta
-        self.Delta = Delta
-        """
+    def cal_Delta(self, version='new'):
+        if version == 'new':
+            nash = np.sum(self.execute(self.nash))
+            collusion = np.sum(self.execute(self.collusion))
+            profits = np.mean(np.sum(self.rewards_log, axis=1))
+            Delta = (profits - nash) / (collusion - nash)
+            self.Delta = Delta
+        else:
+            #original version in the notebook
+            nash = np.sum(self.execute(self.nash))
+            collusion = np.sum(self.execute(self.collusion))
+            profits = np.sum(self.rewards_log, axis=1)
+            cum_profits = np.cumsum(profits) / np.arange(1, len(profits) + 1)
+            delta = (profits - nash) / (collusion - nash)
+            Delta = (cum_profits - nash) / (collusion - nash)
+            self.delta = delta
+            self.Delta = Delta
 
-    def plot(self):
-        self.cal_Delta()
+    def plot(self, version = ''):
+        self.cal_Delta(version=version)
         Delta, delta = self.Delta, self.delta
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 4))
 
