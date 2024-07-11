@@ -1,6 +1,6 @@
 # README
 
-Reader who wants a comprehensive review on algorithmic collusion can refer to: [Algorithmic Collusion in Dynamic Pricing: Past, Present, and Future](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4891632).
+Reader who wants a comprehensive review on algorithmic collusion can refer to: [Algorithmic Collusion in Dynamic Pricing: Past, Present, and Future](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4891632) (It can be download [here](https://chentang01.github.io/pdf/file/Algorithmic_Collusion_Paper.pdf) if no access to SSRN.).
 
 This repository provides a tutorial to reproduce some results of two papers in algorithmic collusion:
 
