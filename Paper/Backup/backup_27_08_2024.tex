@@ -1,0 +1,751 @@
+\documentclass[mnsc,nonblindrev]{workingpaper}
+\OneAndAHalfSpacedXI 
+\usepackage{xcolor}
+\usepackage{bbding}
+\usepackage[title]{appendix}
+\usepackage{longtable}
+\usepackage{caption}
+\usepackage{kpfonts}    % for nice fonts
+\newcommand\fnote[1]{\captionsetup{font=small}\caption*{#1}}
+\usepackage{enumerate}
+\usepackage[section]{placeins}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{arydshln}
+\usepackage{multirow}
+\usepackage{threeparttable}
+\usepackage{amsmath}
+\usepackage{bm}
+\usepackage{booktabs}
+\newcommand{\eqname}[1]{\tag*{#1}}
+\usepackage{hyperref} 
+\usepackage{lscape} 
+\usepackage{array}
+\usepackage{makecell}
+\usepackage{footnote}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[justification=centering]{caption}
+\hypersetup{colorlinks,
+	linkcolor=blue,
+	citecolor=blue,
+	urlcolor=cyan}
+\usepackage[natbibapa]{apacite}
+\bibpunct[, ]{(}{)}{,}{a}{}{,}%
+\def\bibfont{\small}%
+\def\bibsep{\smallskipamount}%
+\def\bibhang{24pt}%
+\def\newblock{\ }%
+\def\BIBand{and}%
+\bibliographystyle{apacite}
+\usepackage{comment}
+\usepackage{subcaption}
+\captionsetup[subfigure]{aboveskip=10pt, belowskip=10pt}
+\TheoremsNumberedThrough     
+\ECRepeatTheorems
+\EquationsNumberedBySection 
+\setlength{\floatsep}{10pt}
+\setlength{\textfloatsep}{10pt}
+\setlength{\intextsep}{10pt}
+\setlength{\parskip}{1.2\baselineskip}
+
+\begin{document}
+
+\RUNAUTHOR{Chen Tang 2024}
+\RUNTITLE{Algorithmic Collusion in Dynamic Pricing: Past, Present, and Future}
+\TITLE{Algorithmic Collusion in Dynamic Pricing:\\ Past, Present, and Future\thanks{I'm grateful to Prof. Guillermo Gallego from the Chinese University of Hong Kong, Shenzhen for his encouragement during my writing. I'm also grateful to Prof. Zhijie Tao from the Shanghai University of Finance and Economics. My research experience with him inspired me to write this paper. 
+\\I write a \href{https://github.com/ChenTang01/Algorithmic_Collusion_in_Dynamic_Pricing}{tutorial} which reproduce part of the results of \cite{calvano2020artificial}, \cite{hansen2021frontiers}. The presentation slides for this paper can be downloaded \href{https://chentang01.github.io/pdf/pre/collusion.pdf}{here}.
+\\\textcolor{magenta}{Any feedback, suggestions, and corrections from readers are sincerely welcome.}}
+}
+\ARTICLEAUTHORS{
+	\AUTHOR{Chen Tang\\[0.5em]July 2024}
+	\AFF{School of Data Science, Chinese University of Hong Kong, Shenzhen\\
+		\EMAIL{ChenTang@link.cuhk.edu.cn}\\
+		\href{https://chentang01.github.io/}{ChenTang01.github.io}\\
+        Click \href{https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4891632}{here} for the latest version
+	}
+}
+\ABSTRACT{
+	\normalsize        
+        This survey examines the development of research on algorithmic collusion in competitive dynamic pricing. Past numerical research has indicated that AI algorithms can lead to collusion. Some empirical and analytical evidence also supports this finding. Although the evidence is incomplete, the apparent algorithmic collusion could potentially threaten social welfare. However, most studied cases of algorithmic collusion are either \textit{spurious} or \textit{genuine} collusion, indicating that such collusion can be broken despite the presence of a reward-punishment scheme in some settings. A more robust form of algorithmic collusion, termed \textit{authentic} collusion, has been rigorously defined, and several authentic collusive algorithms have been developed. Furthermore, I review the regulatory measures against algorithmic collusion and suggest future directions in this field.
+}
+\KEYWORDS{Artificial Intelligence, Reinforcement Learning, Tacit Collusion, Spurious Collusion, Genuine Collusion, Authentic Collusion, Platform Design, Operations Management}
+\maketitle
+
+\section{Introduction}
+\label{sec:intro}
+Dynamic pricing studies how to adapt prices in response to demand fluctuations and is usually employed in settings where prices can be modified frequently. According to a report by McKinsey, implementing dynamic pricing solutions in most business practices has resulted in a sales growth of 2 to 5 percent and an increase in profit margins of 5 to 10 percent (\cite{benmark2017retailers}). Given the substantial economic advantages offered by dynamic pricing strategies, dynamic pricing solutions have found widespread application across various industries such as the electricity market (\cite{dutta2017literature}), online retailing (\cite{lei2018joint}), and airline companies (\cite{wittman2019dynamic}) have embraced these solutions to improve revenues.
+
+It's worth noting that dynamic pricing, contrary to a common intuition that it merely squeezes the consumer surpluses, has been shown to improve consumer welfare and result in a win-win outcome (\cite{chen2019welfare},\cite{williams2022welfare}). In practice, it can lift consumer satisfaction (\cite{benmark2017retailers}).
+
+Dynamic pricing has received significant interest from scholars of various disciplines, including industrial organization, game theory, management science, quantitative marketing, and computer science. Past research on dynamic pricing has primarily concentrated on pricing strategies, demand learning, and pricing considering various scenarios such as inventory constraints and strategic consumer behaviors. \cite{den2015dynamic} provides a comprehensive overview of dynamic pricing. Additionally, \cite{gallegoRevenueManagementPricing2019} is recommended as a textbook for conducting research in dynamic pricing, and \cite{ozer2012oxford} serves as a valuable handbook for understanding dynamic pricing practices. 
+
+Most prior research has commonly assumed the monopoly situation, which does not align with real-world conditions. Despite ongoing debate about whether incorporating competitors can enhance the performance of pricing models, numerous studies have explored this issue (see Subsection \ref{subsec:competition} for more details). It is broadly recognized that competition tends to drive down prices and increase consumer welfare.
+
+Using algorithms to price enables firms to respond more quickly to competitors' decisions in competitive markets (\cite{brown2023competition}). However, a question arises when all firms employ AI algorithms, such as reinforcement learning, to set prices: could this lead to a monopoly market outcome? The answer may indeed be positive, and if the algorithms lead to a monopoly price, understanding the causes and exploring how to prevent diminishing social welfare is critical. These questions have given rise to a burgeoning interdisciplinary field known as \textbf{algorithmic collusion}, which has garnered significant attention since 2020.
+
+The recent study of algorithmic collusion originated with the work of \cite{calvano2020artificial}\footnote{This paper has many versions. It was initially published in 2019 (\cite{calvano2019algorithmic}). A more detailed version was released in 2020 (\cite{calvano2020artificial}) and garnered significant attention from the academic community. Subsequently, a condensed version was published (\cite{calvano2020protecting}).}, in which the authors demonstrated through numerical experiments that the use of Q-learning can result in supra-competitive pricing outcomes within a competitive market setting. The term `supra-competitive' refers to prices higher than the one-stage competitive equilibrium. In a society where an increasing number of companies are now developing AI algorithms for real-time dynamic pricing (\cite{spann2024algorithmic}, \cite{bcgDynamicPricingB2B}), the potential of algorithmic collusion poses a huge threat to social welfare.
+
+To provide readers with an initial taste of algorithmic collusion, I will employ the classic toy model—the prisoner’s dilemma—as an illustrative example. Despite its simplicity, this model effectively captures the essence of the collusion scenario. Consider a static game involving two firms, indexed as $1$ and $2$, selling a homogeneous product. Each firm has the option to set its price at one of two levels: high (H) or low (L). The payoff matrix is given in table \ref{tab:toy_payoff_matrix}:
+\begin{table}[htbp]
+	\centering
+	\caption{The payoff matrix of the toy model}
+	\label{tab:toy_payoff_matrix}
+	\begin{tabular}{cc|c|c}
+                        & & \multicolumn{2}{c}{Player 2} \\
+                        & & $H$ & $L$ \\
+            \hline
+            \multirow{2}{*}{Player 1} & $H$ & $(2,2)$ & $(0.5,3)$ \\
+            \cline{2-4}
+                        & $L$ & $(3,0.5)$ & $(1,1)$ \\
+        \end{tabular}
+\end{table}
+In this single-stage game, the sole Nash equilibrium is for both firms to set low prices. This outcome exemplifies the benefits of competition, as it leads to cheaper prices for consumers. However, \cite{calvano2020artificial} demonstrated that when the payoff matrix is unknown to the firms, and both firms utilize AI algorithms to adjust their prices dynamically, they will eventually learn to collude, ultimately setting high prices. This phenomenon is called algorithmic collusion\footnote{This explanation is intended to provide a basic conceptual understanding for readers less familiar with algorithmic collusion. In subsection \ref{subsec:rigorous}, a more detailed and comprehensive definition of algorithmic collusion will be presented.}.
+
+Now, let's consider the same game played infinitely over time, with the two firms having discount rates of $\delta_1$ and $\delta_2$, respectively, where $0 < \delta_1, \delta_2 < 1$. Consider the one-shot deviation strategy (\cite{hendon1996one}), i.e. both firms initially cooperate by price $H$, but if one observes the other playing $L$, she will retaliate by also playing $L$ for the remainder of the game. This strategy can serve as a credible threat to deter deviation, as long as the expected payoff from not deviating is greater than the payoff from deviation. In this toy model, a Subgame Perfect Nash Equilibrium where both firms price $H$ exists when $\delta_1,\delta_2 \ge \frac{2}{3}$.\footnote{$2\cdot \sum_{t=0}^\infty\delta_1^t \ge 3 + 1 \cdot \sum_{t=1}^\infty \delta_1^t, \quad 2\cdot \sum_{t=0}^\infty\delta_2^t \ge 3 + 1 \cdot \sum_{t=1}^\infty \delta_2^t \\$} The game can lead to a collusive outcome when the discount factors are sufficiently high. This aligns with the Folk theorem (\cite{friedman1971non}), which states that collusion can occur as long as players are patient enough.
+
+I refer to the one-shot deviation principle and the Folk theorem to illustrate that for any rational collusion to be sustained, one firm must be able to deter the other from deviating by lowering prices. In this example, a `smart' firm $1$ needs to possess a credible threat to punish firm $2$ for deviating from the collusive strategy $(H, H)$ to the non-cooperative strategy $(H, L)$, and vice versa. While some AI algorithms do result in supra-competitive outcomes, this may simply be because they are not aware that cutting prices would yield a higher immediate profit (bearing in mind that in these studies, the payoff matrix is always not observable to the firms). \cite{calvano2023algorithmic} categorizes algorithmic collusion into two types:
+\begin{itemize}
+        \item \textit{Spurious Collusion}: Here, high prices are the result of firms not recognizing the potential for greater short-term profits through deviation, rather than due to an explicit reward-punishment scheme.
+	\item \textit{Genuine Collusion}: In this case, high prices are maintained through a reward-punishment mechanism where the AI algorithm exhibits behavior akin to the one-shot deviation principle.
+\end{itemize}
+In fact, the definitions of genuine and spurious collusion presented here are not exhaustive, and there is ongoing debate among scholars about whether so-called `genuine' collusion is truly authentic. For instance, numerous numerical experiments discussed in section \ref{sec:acrl} demonstrate that players can threaten deviation by a reward-punishment scheme, but they may not be sufficiently ‘smart’ to act as absolutely rational agents. The seeming one-shot deviation principle some AI pricing algorithms exhibit may have vulnerabilities that can be exploited, thereby precluding them from being classified as collusion.
+
+After observing the weakness of genuine collusion, some research has refined the concept of algorithmic collusion (\cite{den2023mathematical}). In this paper, I refer to this refined concept as \tit{authentic collusion}. \footnote{The term `authentic collusion' is named by myself, and this definition is simplified from \cite{den2023mathematical}. A detailed illustration of this concept will be provided in Section \ref{sec:authentic}.}
+
+\begin{itemize}
+	\item \textit{Authentic Collusion}: This refers to collusion sustained by a theoretically reliable threat, and the collusive algorithm performs well enough against alternative algorithms.
+\end{itemize}
+
+In Subsection \ref{subsec:rigorous}, an introduction to the definitions of these three types of collusion will be presented within a more structured framework. Currently, many past numerical studies have shown that AI algorithms can converge to spurious or genuine collusion in pricing games. This statement is also supported by empirical and analytical findings. Authentic collusive algorithm has also been developed (\cite{meylahn2022learning}, \cite{loots2023data}). 
+
+It is crucial to emphasize that there is often a mischaracterization regarding the distinction between authentic collusion and genuine collusion. This misinterpretation is one of the key reasons for the ongoing debate on whether algorithmic collusion poses a significant threat to market competition. It is also important to recognize that genuine collusion, while perhaps not embodying a perfectly rational colluder, does not imply that it should be regarded as harmless to market fairness. Keep in mind that the distinctions between spurious collusion, genuine collusion, and authentic collusion are \textbf{not} merely tautology but a meaningful issue.
+                
+To the best of my knowledge, this is the first paper to provide a comprehensive review of the evolution and development of algorithmic collusion. Related works include \cite{assad2021autonomous} and \cite{dorner2021algorithmic}, but this work integrates research from broader disciplines and provides a more comprehensive and systematic examination of algorithmic collusion, along with potential opportunities for future research. The structure of this paper is organized as follows: Section \ref{sec:acrl} delves into the development and debates surrounding algorithmic collusion under reinforcement learning algorithms. Section \ref{sec:authentic} explores the research on designing algorithms that can achieve authentic collusion. Section \ref{sec:reglate} focuses on regulatory approaches against algorithmic collusion. Finally, in section \ref{sec:conclusion}, I will summarize past progress and suggest directions for future research.
+
+\subsection{Dynamic Pricing under Competition}
+\label{subsec:competition}
+
+Here I briefly review competitive dynamic pricing; for a more detailed illustration, see \cite{chen2015recent}. Much of the prior research in this area has centered on the theoretical equilibria of pricing games under various settings such as inventory capacity constraints, strategic consumer behaviors, and product differentiation. For example, \cite{adida2010dynamic} offers solutions for calculating the normalized Nash equilibrium in a dynamic scenario where multiple products share production capacity. \cite{martinez2011dynamic} investigates the equilibrium of pricing games where each seller faces a fixed inventory capacity. \cite{gallego2014dynamic} examines an oligopoly market dealing with a range of perishable, differentiated products and discovers that, under deterministic demand, the equilibrium can exhibit a simple structure: the equilibrium prices at any given time can be determined by a one-shot price competition game based on the current demand, while also considering a set of time-invariant shadow prices that reflect the aggregate capacity externalities.
+
+Another line of research concentrates on the validity of the \textit{market response hypothesis} in competitive markets. This hypothesis conjects that even if a firm models the market as a monopoly and learns the model parameters from historical data, the monopoly model can inherently capture information about competitors through market dynamics. This stream is related to misspecified learning (\cite{besbes2015surprising}). For example, \cite{cooper2015learning} studies that, in a duopoly market, if both firms use a monopoly model to guide the pricing, how would the game converge? They found that under some settings, the result of applying the monopoly model would not converge to the static Nash equilibrium. Finally, some additional papers delve into pricing strategies as a response to competitors, such as \cite{fisher2018competition} and \cite{schlosser2018dynamic}.
+
+In summary, the study of algorithmic collusion of competitive dynamic pricing is a relatively new field, with work in this area gaining momentum after 2019.
+
+\section{Algorithmic Collusion under Reinforcement Learning}
+\label{sec:acrl}
+
+In this section, the fundamentals of reinforcement learning algorithms are outlined, with a focus on Q-learning. Most past research in this area is numerical experiments and will be detailed in Subsection \ref{subsec:numerical}, along with criticize in \ref{subsec:criticize}. Then \ref{subsec:theoretical} and \ref{subsec:empirical} will provide theoretical and empirical evidence for algorithmic collusion respectively. Finally, I will give my remarks on the algorithmic collusion under RL in Subsection \ref{subsec:remark},.
+
+\subsection{Introduction to Reinforcement Learning}
+\label{subsec:irl}
+
+Reinforcement learning has its roots in the Markov decision process (MDP), which serves as a mathematical framework for modeling discrete-time sequential decision-making processes. Within this framework, a decision-making process can be characterized by five key elements:
+\begin{enumerate}
+	\item States ($\mathcal{S}$): a finite set representing all possible states of the environment;
+	\item Actions ($\mathcal{A}(\mathcal{S})$): a finite set of actions available to the decision-maker, which may depend on the current state;
+	\item Transition Probabilities ($\mathcal{T}:\mathcal{S}\times\mathcal{A}\to \mathcal{S}$): The probability of transitioning to a new state given the current state and the action taken;
+	\item Rewards Function ($\mathcal{R}:\mathcal{S}\times\mathcal{A}\to \mathbb{R}$): A function that assigns a reward for each state-action pair;
+	\item Discount Factor ($\delta\in[0,1]$):  A factor that discounts future rewards based on their distance from the present.
+\end{enumerate}
+During each discrete time $t$ in a state $s_t\in \mathcal{S}$, the decision maker selects an action $a_t\in\mathcal{A}(s_t)$ and receives a reward $r_t$ according to the rewards function $\mathcal{R}$. The agent then transitions to a new state $s_{t+1}$ based on the transition probabilities $\mathcal{T}$. A policy $\pi$ is defined as a mapping from states to actions, and the goal of an agent is to find the optimal policy that maximizes the expected cumulative reward over time, conditioning on the environment's transition probabilities $\mathcal{T}$ and rewards function $\mathcal{R}$, as well as the current state $s_t$:
+\[
+    \max_{\pi}\mathbf{E}\left[\sum_{i=t}^{\infty} \delta^i r_i\mid \pi, \mathcal{T},\mathcal{R},s_t\right] 
+\]
+
+Reinforcement learning is designed to find the optimal policy within an MDP process through the interactions between an agent and its environment. The majority of reinforcement learning algorithms operate on a \textit{model-free basis}, signifying that they do not require prior knowledge of the environment's dynamics, such as the transition probabilities and the reward function. These algorithms also do not rely on maintaining an estimation of the environment to make decisions. One of the most prominent methods in RL is Q-learning, which maintains a Q-function $Q(s,a)$ for every state-action pair. In the context of Q-learning, the optimal policy is always to pick the action associated with the highest Q-value:
+\[
+    \pi(s)=\arg\max_aQ(s,a) 
+\]
+ The Q-function represents the expected return obtained after taking action $a$ in state $s$ and following the optimal policy thereafter. The core idea of Q-learning is to iteratively update the Q-function using the Bellman equation, which relates the value of a state-action pair to the immediate reward and the discounted value of the next state:
+ \begin{equation}
+	Q(s_t,a_t)\leftarrow Q(s_t,a_t)+\alpha[r_{t}(s_t,a_t)+\delta\max_aQ(s_{t+1},a)-Q(s_t,a_t)],
+ \end{equation}
+ where $\alpha$ is the \textbf{learning rate} adjusting the weight of new information. When a policy is chosen by maximizing the Q-function, this policy is deemed optimal, and thus the current Q-function can be referred to as the optimal Q-function. It has been proven that the Q-function will converge to the optimal Q-function if every state-action pair is visited an infinite number of times (\cite{melo2001convergence}).
+
+It should be noted that Q-learning can only converge to the optimal policy under the assumption that every state-action pair is visited infinitely often. This leads to a key aspect of Q-learning: balancing exploration and exploitation. Choosing the action with the highest Q-value is an act of greediness, which is termed as \textit{exploitation}; Meanwhile, there is a constant concern regarding whether the estimated Q-function is indeed optimal, which requires \textit{exploration}. To address this, Q-learning employs a strategy known as $\epsilon$-greedy. At each time step $t$, the agent selects an action randomly with a probability of $\epsilon$, and with a probability of $1-\epsilon$, it chooses the action associated with the highest Q-value. The algorithm process of Q-Learning with $\epsilon$-greedy exploration is illustrated in Algorithm \ref{alg:Q}.
+
+\begin{algorithm}[ht]
+    \caption{Q-Learning with $\epsilon$-Greedy Exploration}
+    \label{alg:Q}
+    \begin{algorithmic}[1]
+        \State Initialize action-value function \( Q(s, a) \) arbitrarily for all \( s \) in \( \mathcal{S} \) and \( a \) in \( \mathcal{A} \) 
+        \State Initialize $Q'(s,a) \leftarrow 0$
+        \State Initialize a learning rate \( \alpha \), discount factor \( \delta \), exploration rate \( \epsilon \), and threshold \( \delta \)
+        \State \( s \) $\leftarrow$ initial state
+        \While{$|Q-Q'|_{\infty}>\delta$}{
+            \State $Q\leftarrow Q'$
+            \State \( a \) $\leftarrow$ \textbf{argmax} \( Q(s, a) \) with probability \( 1 - \epsilon \) \Comment{Exploitation}
+            \State \( a \) $\leftarrow$ random action from \( \mathcal{A} \) with probability \( \epsilon \) \Comment{Exploration}
+            \State Take action \( a \), observe reward \( r \) and next state \( s' \)
+            \State \( Q'(s,a) \) $\leftarrow$ \( Q(s,a) + \alpha(r + \delta \cdot \max_{a'} Q(s', a') - Q(s, a)) \)
+            \State \( s \) $\leftarrow$ \( s' \) \Comment{Transition to the next state}
+            \EndWhile
+        }
+        \State \Return $\pi^*(s)=\arg\max_{a}Q(s,a)$
+    \end{algorithmic}
+\end{algorithm}
+
+In most practical applications, $\epsilon$ is designed as a decreasing function of time $t$, implying that the probability of choosing an action randomly decreases as time progresses. This approach aims to prevent over-exploration. For instance, in the seminal paper discussing the convergence of Q-learning to a collusive policy (\cite{calvano2020artificial}), the authors utilized an exponentially declining exploration rate over time:
+\begin{equation}
+\label{eq:exploration}
+     \varepsilon_t=e^{-\beta t}.
+\end{equation}
+
+Q-learning is a fundamental algorithm in the realm of reinforcement learning, and numerous advanced algorithms have been developed based on its core principles. For example, DQN (Deep Q-Network) (\cite{mnih2015human}) maintains a Q-function for each state-action pair, updating it not through the Bellman equation, but by employing a deep neural network to predict Q-values. Algorithms that make decisions based on state-action pair Q-functions are termed \textit{value-based} algorithms. Currently, state-of-the-art reinforcement learning algorithms do not rely on the Q-function to estimate the expected payoff for each state-action pair. Instead, they directly parameterize and differentiate the policy. A notable example of such an algorithm is the Deep Deterministic Policy Gradient (DDPG) algorithm (\cite{lillicrap2015continuous}). For a comprehensive understanding of these advanced reinforcement learning algorithms, readers should refer to \cite{sutton2018reinforcement}.
+
+The structure of dynamic pricing aligns closely with the Markov Decision Process (MDP) framework, where the state can be defined as the historical prices, the action can be the price, and the reward can be the profit. Past research has investigated the application of RL algorithms in dynamic pricing. For instance, \cite{liu2019dynamic} employs field experiments and shows that dynamic pricing strategies based on deep reinforcement learning can significantly outperform manual pricing approaches conducted by operational experts.
+
+\textbf{Bandit learning} is a special RL algorithm with no state space. It maintains an estimated reward for each action using the empirical mean and a penalty term to prevent frequent selections on sub-optimal action. For example, the famous Upper Confidence Bound (UCB) algorithm estimates the reward using the following representation:
+\[
+UCB_i(t-1,\delta)=\underbrace{\frac{1}{N_{i,t-1}}\sum_{t^{\prime}\leq t-1}r_{t^{\prime}}\mathbb{I}\{a_{t^{\prime}}=i\}}_{\text{Empirical Mean}}+\underbrace{\sqrt{\frac{2\log(1/\delta)}{N_{i,t-1}}}}_{\text{Penalty Term}},
+\]
+where $\delta$ is the confidence level and $N_{i,t-1}$ is the number of times action $i$ has been chosen by time $t$. The empirical mean serves as the exploitation, while the penalty term is a way for exploration. Prior research has integrated bandit learning into dynamic pricing strategies (\cite{misra2019dynamic}).
+
+Competitive dynamic pricing involves multiple agents who make decisions in the same environment. The literature on algorithmic collusion studies situations where all agents price \textbf{independently}, meaning each agent considers only its own actions. The algorithms illustrated above are all independent algorithms and are appropriate for such settings. There was research on multi-agent reinforcement learning, including multi-agent Q-learning (\cite{hu1998multiagent}) and Nash Q-learning (\cite{hu2003nash})\footnote{The reason for mentioning independent algorithms here is that it has been proven that multi-agent Q-learning converges to the Nash equilibrium in any general-sum game. However, these algorithms are not Q-learning algorithms used in algorithmic collusion literature.}. However, these multi-agent reinforcement learning algorithms, which require agents to make decisions for all agents and require information about other agents, are not applied in the context of dynamic pricing.
+
+\subsection{Numerical Experiments of Algorithmic Collusion under Reinforcement Learning}
+\label{subsec:numerical}
+
+\cite{calvano2020artificial} is the first paper discussing algorithmic collusion under reinforcement learning. Considering a market of $n$ firms, each sells one differentiated product, the demand for firm $i$ at time $t$ is given by:  
+\begin{equation}
+	q_{i,t}=\frac{e^{\frac{a_i-p_{i,t}}\mu}}{\sum_{j=1}^ne^{\frac{a_j-p_{j,t}}\mu}+e^{\frac{a_0}\mu}}.
+\end{equation}
+The parameter $a_i$ is the vertical differentiation for each firm, $a_0$ is the utility of an outside good, $\mu$ is the index of horizontal differentiation, and $p_{i,t}$ is the price of product $i$ at time $t$. The payoff function is given by $\pi_{i,t}=(p_{i,t}-c_i)q_{i,t}$, where $c_i$ is the cost. There are two important prices in all papers on algorithmic collusion:
+\begin{enumerate}
+	\item The collusive prices $\mathbf{p}^{col}$, also known as the monopoly prices, are calculated by maximizing the sum of profits of all firms;
+	\item The competitive prices $\mathbf{p}^{com}$ is the Bertrand-Nash equilibrium prices of the one-shot game.
+\end{enumerate}
+It is assumed that $p_i^{com}<p_i^{col}$. The authors discretize the action space by limiting the feasible prices for each firm $i$ to $m$ equidistant points within the interval $[p_i^{com}-\xi(p_i^{col}-p_i^{com}), p_i^{com}+\xi(p_i^{col}-p_i^{com})]$, where $\xi>0$ is a given parameter. Under the assumption that competitors' historical prices are publicly available information, each agent utilizes the prices from the last $k$ periods of all agents to construct the state space:
+\[
+	s_t = \{\mathbf{p}_{t-1},\ldots,\mathbf{p}_{t-k}\}
+\]
+The style of constructing the action space has been succeeded by subsequent research. It is assumed that each firm is unaware of the structure of the demand function and employs the Q-learning algorithm, as described in Algorithm \ref{alg:Q}, to determine prices, with the only variation being in the termination condition. In each simulation, the game will terminate either upon convergence or after a maximum of two billion epochs, where \textbf{convergence} is defined as the situation where the optimal strategy for all agents remains unchanged over a consecutive 100,000 epochs. Upon completion of a simulation, the \textbf{average profit gain} $\Delta$ will be computed using:
+\begin{equation}
+	\Delta\equiv\frac{\bar{\pi}-\pi^{com}}{\pi^{col}-\pi^{com}},
+\end{equation}
+where $\bar\pi$ represents the average sum of profits across all epochs, and $\pi^{com}$ denotes the sum of profits when the market operates at competitive prices. When $\Delta=0$, the game is characterized by full competition. As $\Delta$ increases, the outcome is termed \textit{supra-competitive}, indicating that the average price set by the firms exceeds the Nash equilibrium. A $\Delta$ value of 1 signifies that both players consistently charge the collusive prices. 
+
+The size of the state space is given by $|S|=m^{nk}$, which grows exponentially with both $n$ and $k$. To avoid memory issues, the authors restrict $n=2$ and $k=1$, implying that the market consists of only two firms, and each firm decides solely on the price from the previous epoch. The authors analyzed the average profit gain over various values of $\alpha$, the learning rate, and $\beta$, the exploration parameter\footnote{In the baseline simulation, the demand function does not incorporate stochasticity. Randomness and asymmetry are considered in their robustness checks, and the experiment exhibits similar results.}. For each parameter combination, the authors conducted 1,000 simulations, and the results are presented in Figure \ref{fig:calvano_fig1}.
+
+\begin{minipage}[t]{0.5\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{pic/calvano_pic1.png}
+    \captionof{figure}{$\Delta$ For a Grid of Values of $\alpha$ and $\beta$\\ \tiny The baseline simulation involve a $100\times100$ parameter grid bwtween the learning rate $\alpha$ and the exploration parameter $\beta$, the shading of the color indicates the average $\Delta$ in 1,000 simulations for each parameter combination. This is copied from figure 1 in \cite{calvano2020artificial}.}
+    \label{fig:calvano_fig1}
+\end{minipage}
+\begin{minipage}[t]{0.5\textwidth}
+    \centering
+    \includegraphics[width=0.85\textwidth]{pic/calvano_pic1_rep.png}
+    \captionof{figure}{Replication for Figure \ref{fig:calvano_fig1}\\ \tiny To reduce the replication time, a parameter grid with size $20\times20$ was used, and only 10 simulations were conducted for each parameter combination.\\ The code generating this figure is available \href{https://github.com/ChenTang01/Algorithmic_Collusion_in_Dynamic_Pricing/blob/main/calvano2020artificial.ipynb}{here}.}
+    \label{fig:calvano_fig1_rep}
+\end{minipage}
+
+Figure \ref{fig:calvano_fig1_rep} represents my replication of a smaller scale. It is evident that in the majority of settings, $\Delta$ is significantly greater than $0$, suggesting that the average profits are higher than the competitive profits. In certain settings, $\Delta$ nears $1$, implying that the game has converged to a full monopoly situation. Given that the only information exchanged between the two firms is the historical prices, this situation can be described as a tacit collusion. However, it remains to be investigated whether this collusion can be classified as a \textit{genuine collusion}—one that includes a punishment scheme for deviations—or if it remains a \textit{spurious collusion}. 
+
+The authors explore this question by manually adjusting the prices of one firm after convergence has been achieved. Specifically, when the game has converged at time $0$, the researchers randomly select one firm to be the \textit{deviating agent}. At time $1$, they set the price of the deviating agent lower than the converged price, ensuring that the deviating firm can earn more than by charging the supra-competitive price in a single-period game. Meanwhile, the non-deviating firm continues to set its price using the Q-learning algorithm. After time $1$, both firms resume using the Q-learning algorithm to determine their prices, allowing the researchers to observe the pricing dynamics of the game. The results are shown in figure \ref{fig:calvano_pic4}.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.55\linewidth]{pic/calvano_pic4.png}
+    \caption{\\ \tiny The figure illustrates the dynamics of prices following a forced deviation, with the data representing the average prices across the 1,000 sessions. This is copied from Figure 4 in \cite{calvano2020artificial}.}
+    \label{fig:calvano_pic4}
+\end{figure}
+
+We can observe that at time $2$, immediately following the forced deviation, the non-deviating agent initiates a price war by reducing its prices. Subsequently, both firms gradually increase their prices and return to the converged prices within 10 epochs. It should be noted that in more than 95\% simulations, the punishment scheme results in the deviating agent being less profitable than if it had continued charging the supra-competitive prices. These findings show that the use of Q-learning for pricing can lead to \textit{genuine collusion}. Calvano's study has had a significant impact, particularly in the fields of industrial organization and game theory. Shortly after its publication, numerous studies have embarked on numerical experiments to investigate whether other reinforcement learning algorithms can learn to collude in this or different economic settings.
+
+\cite{hettich2021algorithmic} investigates whether DQN (Deep Q-Network) can learn to collude within Calvano's environment. The simulation indicates that DQN can learn to collude in a duopoly market and converge to supra-competitive outcomes more rapidly than the Q-learning algorithm, and the punishment scheme is also observed. DQN allows for testing in oligopoly markets with many agents since DQN does not require a large Q-matrix for every state-action pair. Simulations with multiple firms reveal that an increasing number of firms decreases $\Delta$, and when $n\ge 10$, the convergent prices align exactly with the Nash equilibrium of a one-shot game (See figure \ref{fig:hettich_fig6}).
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.45\linewidth]{pic/hettich_fig6.png}
+    \caption{\\ \tiny The figure depicts how $\Delta$ varies as the number of firms in the system increases. The \textit{State Reformulation} box adjusts the state space to represent the average price from the last epoch, rather than the individual prices of both players. This is copied from figure 6 in \cite{hettich2021algorithmic}.}
+    \label{fig:hettich_fig6}
+\end{figure}
+
+In addition to the economic environment employed in Calvano's work, many researchers are focusing on the Bertrand pricing model. In the Bertrand model, two firms sell a homogeneous product, and consumers choose the product with the lowest price in the duopoly market. The demand function for firm $i$ is given by:
+\begin{equation}
+\label{eq:bertrand}
+    d_i(p_i,p_j)=
+    \begin{cases}
+        D(p_i),&\quad\text{if } p_i<p_j,\\
+        D(p_i)/2,&\quad\text{if } p_j=p_i,\\
+        0,&\quad\text{otherwise}.
+    \end{cases}
+\end{equation}
+
+\cite{asker2022artificial}, \cite{asker2023impact} explores state-free Q-learning algorithms within the Bertrand model. Several features of this study are highlighted below:
+\begin{enumerate}
+    \item The state space for the Q-learning algorithm is reduced to a singleton, indicating that the algorithm does not rely on historical prices;
+    \item $\delta=0$, implying that the algorithm considers only the one-period payoff;
+    \item There is no $\epsilon$ exploration; instead, at each epoch, the agent persistently uses the greedy action;
+    \item The authors term the Q-value updating scheme in algorithm \ref{alg:Q} as the \textit{asynchronous} version of Q-learning and introduce another updating scheme known as \textit{synchronous} updating\footnote{The synchronous updating scheme requires the input of a counterfactual reward-estimation function $r^e(\cdot)$, which is utilized to estimate $r_i(a_i,a_j)$. Synchronous updating requires that when action $a_i$ is chosen in a given epoch, all corresponding Q-values $Q_i(a_i)$ must be updated. In the ideal but unrealistic case of perfect synchronous updating, the firm is assumed to employ the true demand function as $r^e(\cdot)$. The term \textit{synchronous} as used here deviates from the convention in computer science literature, and I personally maintain a cautious stance regarding the practical application of this algorithm.}, which is detailed in algorithm \ref{alg:asker2022}.
+\end{enumerate}
+
+\begin{algorithm}[ht]
+    \caption{Synchronous Algorithm in \cite{asker2022artificial}}
+    \label{alg:asker2022}
+    \begin{algorithmic}[1]
+        \State Initialize action-value function \( Q(a_i) \) for all \( a_i \) in \( (\mathcal{A} \) 
+        \State Input a counterfactual reward-estimation function $r^e(\cdot)$ and initialize a learning rate \( \alpha \)
+        \While{Not Converge}{
+            \State \( a_i \) $\leftarrow$ \textbf{argmax}_{a_i} \( Q(a_i) \) 
+            \State Take action \( a_i \), observe opponent's action $a_j$ and reward $r_i(a_i,a_j)$
+            \State \( Q(a_i) \) $\leftarrow$ \( \alpha r_i(a_i, a_j) + (1-\alpha)Q(a_i)   \)
+            \State \( Q(a_k) \) $\leftarrow$ \( \alpha r^e(a_k,a_j) + (1-\alpha)Q(a_k)   \) for all $k\ne i$ \Comment{Synchronous Updating} 
+            \EndWhile
+        }
+    \end{algorithmic}
+\end{algorithm}
+
+The numerical results indicate that the state-free Q-learning algorithm that doesn't care about future payoffs ($\delta=0$) can converge to supra-competitive outcomes. Even when both firms use a downward-sloping demand function as the counterfactual reward-estimation function to update their Q-functions symmetrically, the game tends to result in supra-competitive pricing. The game can converge to the Nash equilibrium only under the perfect synchronous updating scheme, in which the firms know the demand function.
+
+\cite{klein2021autonomous} explores the sequential Bertrand pricing game, where firms adjust prices \textbf{sequentially}: Firm 1 can only adjust its price in odd-numbered periods, while Firm 2 adjusts its price in even-numbered periods. In the Markov Perfect Equilibrium, firms engage in undercutting each other by one increment until prices reach the lower bound, after which one firm resets prices to one increment above the monopoly price, and the cycle restarts. This equilibrium is called the Edgeworth price cycle (\cite{maskin1988theory}). In the numerical testing, both firms use a modified version of Q-learning to price:
+\begin{enumerate}
+    \item To satisfy the Markov assumption, the state space is defined as the competitor’s previous price, rather than the previous price of both firms;
+    \item Since the game is sequential, the updating scheme of the Q-value is modified to:
+    \[
+        Q(p_{i,t},s_t)=\pi_i(p_{i,t},s_t)+\delta\pi_i(p_{i,t},s_{t+1})+\delta^2\max_pQ_i(p,s_{t+1})
+    \]
+\end{enumerate}
+The results show that when the action space is small ($k=6$), the game can converge to the genuine collusion; when the action space is large ($k=24$), the game tends to settle into a pattern similar to the Edgeworth cycle\footnote{However, although the dynamics look like the Edgeworth cycle, they are not the same.} (see Figure \ref{fig:klein_fig7}), yet the average profitability still exceeds that of the equilibrium.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.55\linewidth]{pic/klein_fig7.png}
+    \caption{\\ \tiny The figure illustrates the final average market price, which tends to settle into an Edgeworth cycle pattern: firms undercut the price of one increment until the price reaches their lower bound, then one firm resets price and the cycle restarts. This is copied from figure 7 in \cite{klein2021autonomous}.}
+    \label{fig:klein_fig7}
+\end{figure}
+
+Bandit algorithm can still bring tacit collusion (\cite{hansen2021frontiers}). Consider a symmetric duopoly linear demand:
+\[
+    \pi_{i,t} = (\alpha - \beta p_{i,t} + \gamma p_{-i, t})\cdot p_{i,t} + \epsilon_t, \quad
+    \epsilon_t \sim U[-\frac1\delta,\frac1\delta],
+\]
+where $\delta$ represents the signal-to-noise ratio (SNR) and a lower SNR results in greater profit stochasticity. Each firm utilizes the \textit{UCB-tuned} algorithm to update the value for each bandit $k$ at time $t$:
+\begin{equation}
+    \mathrm{UCB-tuned}_{k,t} =\underbrace{\bar{\pi}_{k,t}}_{\text{Empirical Mean}}+\underbrace{\sqrt{\frac{\log t}{n_{k,t}}\mathrm{min}\left(\frac14,\overline{\pi_{k,t}^{2}}-\bar{\pi}_{k,t}^{2}+\sqrt{\frac{2\log t}{n_{k,t}}}\right)}}_{\text{Penalty Term}},
+\end{equation}
+where $n_{k,t}$ is the represents the frequency of the agent taking action $k$ up to time $t$, and $\overline{\pi_{k,t}^{2}}-\bar{\pi}_{k,t}^{2}$ is the empirical variance. The action space is limited to only two actions: $p^{col}$ and $p^{com}$\footnote{The competitive and collusive prices can be computed explicitly: $p^{com} = \frac{\alpha}{2\beta-\gamma}, \quad p^{col} = \frac{\alpha}{2(\beta-\gamma)}$.}. Figure \ref{fig:hansen_fig2} visualizes the density of convergent prices. As the SNR increases, making the profit function more stable, the game is more likely to converge to a monopoly outcome.
+
+\begin{minipage}[t]{0.5\textwidth}
+    \centering
+    \includegraphics[width=0.8\textwidth]{pic/hansen_fig2.png}
+    \captionof{figure}{Game convergence under different SNR\\ \tiny In the baseline experimentation, $p^{com}=0.4,p^{col}=0.8$. The more the shadow leans towards the upper right corner, the higher the chance the game will converge to collusion. This is copied from figure 2 in \cite{hansen2021frontiers}.}
+    \label{fig:hansen_fig2}
+\end{minipage}
+\begin{minipage}[t]{0.5\textwidth}
+    \centering
+    \includegraphics[width=0.8\textwidth]{pic/hansen_fig2_rep.png}
+    \captionof{figure}{Replication for Figure \ref{fig:hansen_fig2}\\ \tiny The parameter setting is exactly the same as the original work.\\ The code generating this figure is available \href{https://github.com/ChenTang01/Algorithmic_Collusion_in_Dynamic_Pricing/blob/main/hansen2021frontiers.ipynb}{here}.}
+    \label{fig:hansen_fig2_rep}
+\end{minipage}
+
+Other numerical studies on algorithmic collusion by RL include \cite{fish2024algorithmic}, which examines large language models; \cite{martello2022autonomous}, which examines the actor-critic algorithm; and \cite{koirala2024algorithmic}, which examines the Proximal Policy Optimization algorithm. See Table \ref{tab:summary} for a summary of all numerical research.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{cccc}
+        \toprule
+        \textbf{Algorithm} & \textbf{Environment} & \textbf{Collusion} & \textbf{Type of Collusion}\\
+        \midrule
+         Q-learning & Calvano & Yes & Genuine & \cite{calvano2020artificial}\\
+         \midrule
+         DQN & Calvano & Yes & Genuine & \cite{hettich2021algorithmic} \\
+         \midrule
+         Actor-Critic & Calvano & Yes & Genuine & \cite{martello2022autonomous} \\
+         \midrule
+         LLM & Calvano & Yes & Unkown & \cite{fish2024algorithmic} \\
+         \midrule
+         Perfect Synchronous State-Free Q-learning & Bertrand & No & / & \cite{asker2022artificial} \\
+         \midrule
+         Asynchronous State-Free Q-learning & Bertrand & Yes & Spurious & \cite{asker2023impact} \\
+         \midrule
+         Sequential Q-learning & Sequential Bertrand & Yes & Unkown & \cite{klein2021autonomous} \\
+         \midrule
+         UCB-tuned & Linear Duopoly & Yes & Unkown & \cite{hansen2021frontiers} \\
+         \bottomrule
+    \end{tabular}
+    \caption{A Summary of Numerical Studies of Algorithmic Collusion under RL}
+    \label{tab:summary}
+\end{table}
+
+\subsubsection{Historical Research on Algorithmic Collusion in Cournot Game}
+\label{subsubsec:cournot}\textbf{}
+
+In fact, long before \cite{calvano2019algorithmic}, research on algorithmic collusion in Cournot games had been conducted. In a Cournot game, multiple firms determine the production level (quantity) of products, and the market price is determined by the total production levels. \cite{kimbrough2005learning} consider the duopoly Cournot game where both agents employ a state-free Q-learning algorithm to select actions. Rather than using a static strategy, the study utilizes five \textbf{molecular strategies}. Denote the production quantity of one firm at time $t$ as $x_t$ and that of the opposing firm as $y_t$:
+\begin{itemize}
+    \item \textit{Generous Tit for Tat}: if $y_{t-1}>y_{t-2}$, then $x_t=x_{t-1}+\delta$; else $x_t=x_{t-1}-\delta$;
+    \item $\cdots$
+    \item \textit{BestResponse}: the best response to $y_{t-1}$ given the price function.
+\end{itemize}
+Both firms use the \textit{BestResponse} strategy is the SPNE with the lowest profit. The average profit under Q-learning exceeds the lowest profit, suggesting that Q-learning results in tacit collusion in this game. Further research into tacit collusion facilitated by AI algorithms can be found in \cite{waltman2008q}, \cite{kimbrough2009learning}, and \cite{siallagan2013aspiration}.
+
+\subsection{Criticize of Algorithmic Collusion in Numerical Experiments}
+\label{subsec:criticize}
+
+Many voices argue that algorithmic collusion is far more challenging in practice (\cite{schwalbe2018algorithms}). The main points of criticism can be summarized into four aspects:
+
+\textbf{Firstly}, while collusion may appear to involve a reward-punishment scheme, it is not sufficiently smart to pose a credible threat to an opponent's deviation. It is widely believed that algorithmic collusion results from the insufficient exploration inherent in the Q-learning algorithm. For example, \cite{abada2023artificial} test the case where agents were forced to explore randomly with a probability double than the standard probability. They found that the market dynamics were closer to the perfect competition under the modified exploration mode. Another piece of evidence indicating imperfect exploration as a cause comes from figures \ref{fig:calvano_fig1} and \ref{fig:calvano_fig1_rep}. Note that the leftmost side of the graphs, where the algorithm focuses more on exploration, is accompanied by a smaller $\Delta$. This suggests that the Nash equilibrium may be achieved when the Q-learning is given enough time to explore.
+
+What's more, the algorithms can sometimes behave extremely irrationally. Figure \ref{fig:calvano_pic4} seems to depict a perfect retaliation scheme, but it aggregates the dynamics of 1,000 rounds. \ref{fig:reward-punishment} depicts the trace of one single experiment. The traces are quite disorganized, and the converging prices are not identical for the two firms, even though the parameter setting is symmetric.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.6\linewidth]{pic/reward-punishment.png}
+    \caption{\\ \tiny At time 1, the deviating agent is forced to set a low price, while the non-deviating agent continues to price using the algorithm. Thereafter, the prices for both agents are determined exclusively by the algorithm.}
+    \label{fig:reward-punishment}
+\end{figure}
+
+Additionally, \cite{epivent2024algorithmic} shows that the reward-punishment scheme does not respond solely to deviation behaviors when an opponent decreases price; instead, it occurs whenever the opponent adjusts their prices, even when the opponent swifts to a higher price. Thus, many scholars argue that the supra-competitive convergence, although static for more than 100,000 epochs in the simulation, is not any well-defined equilibrium i.e. \textit{``what looks like collusion need not be collusion''} (\cite{den2022artificial}). Without theoretical support, the market may trend closer to competitive outcomes after sufficient exploration.
+
+\textbf{Secondly}, the \textit{number effect} (\cite{schwalbe2018algorithms}) should be considered in real markets. This effect suggests that as the number of firms participating in the market increases, the tacit collusion induced by Q-learning may be mitigated or even eliminated. This phenomenon has been verified by several studies including \cite{hettich2021algorithmic}, \cite{asker2022artificial}, \cite{abada2023artificial}.
+
+\textbf{Thirdly}, while numerical experiments can model aspects of the real world, the current simulations are still quite distinguished from the complexities of actual environments. For example, it's not likely for firms to adopt the Q-learning algorithm to price when it can be outperformed by other simpler algorithms, such as Exp3 (\cite{den2022artificial}).
+
+\textbf{Finally}, the conditions for the existence of a collusive equilibrium in the numerical experiment's environment are harsh. \cite{den2022artificial} refined the definition of equilibrium to accommodate the dynamics of dynamic pricing using $\epsilon$-greedy Q-learning in a duopoly market. Similar to previous research, the state space is defined as the actions of both firms in the last epoch, i.e., $s\in\mathcal{A}_{-i}\times\mathcal{A}_{i}$.
+
+\begin{definition}
+    $(\delta-\epsilon)$-\textit{best-response}: A strategy $\sigma^{(i)}=\{\sigma^{(i)}(s):s\in\mathcal{A}_i\times\mathcal{A}_{-i}\}$ of player $i$ is called $(\delta-\epsilon)$-\textit{best-response} to strategy $\sigma^{(-i)}=\{\sigma^{(-i)}(s):s\in\mathcal{A}_{-i}\times\mathcal{A}_{i}\}$ if the following equation holds for all states $s$ and $s_{-i}$:
+    \begin{equation}
+        \begin{aligned}
+            \sigma^{(i)}(s)&\in\arg\max_{a\in\mathcal{A}_{i}}\frac{\epsilon}{|\mathcal{A}_{-i}|}\sum_{a_{-i}\in\mathcal{A}_{-i}}\{r_{i}(a,a_{-i})+\delta V_{\sigma^{(-i)}}^{(i)}(a,a_{-i})\}\\
+            &+(1-\epsilon)\{r_{i}(a,\sigma^{(-i)}(s_{-i},s_{i}))+\delta V_{\sigma^{(-i)}}^{(i)}(a,\sigma^{(-i)}(s_{-i},s_{i}))\},
+        \end{aligned}
+    \end{equation}
+    where the value function $V_{\sigma(-i)}^{(i)}(s)$ is defined by:
+    \begin{equation}
+        \begin{aligned}
+            V_{\sigma(-i)}^{(i)}(s)&:=\max_{p\in\mathcal{A}_{i}}\frac{\epsilon}{|\mathcal{A}_{-i}|}\sum_{a_{-i}\in\mathcal{A}_{-i}}\{r_{i}(a,a_{-i})+\delta V_{\sigma^{(-i)}}^{(i)}(a,a_{-i})\}\\
+            &+(1-\epsilon)\{r_{i}(a,\sigma^{(-i)}(s_{-i},s_{i}))+\delta V_{\sigma^{(-i)}}^{(i)}(a,\sigma^{(-i)}(s_{-i},s_{i}))\},
+        \end{aligned}
+    \end{equation}
+    A strtegy pair $(\sigma^{(i)},\sigma^{(-i)})$ is claled a $(\delta-\epsilon)$-\textit{strategy-equilibrium} if they are mutually $(\delta-\epsilon)$-best-response to each other.
+\end{definition}
+
+This definition of best response aligns with the exploratory nature of Q-learning. When both firms use $\epsilon$-greedy Q-learning to make decisions, the optimal strategy and equilibrium must account for the opponent's random exploration behavior. It has been proven that for any $\delta$, there exists an $\epsilon^*(\delta)\in (0,1)$ such that for all $\epsilon>\epsilon^*(\delta)$, the only $(\delta-\epsilon)$-strategy-equilibrium is both firms use the competitive price (for further details, see \cite{den2022artificial}). This implies that the conditions for the existence of a theoretically reliable equilibrium are stringent, even if the simulation environment were to be applied in the real world.
+
+\subsection{Theoretical Evidence of Algorithmic Collusion}
+\label{subsec:theoretical}
+
+Den Boer's definition of $(\delta-\epsilon)$-strategy-equilibrium greatly can explain the slow convergence observed in Calvano's numerical experiments. The supra-competitive $(\delta-\epsilon)$-strategy-equilibrium only exists when $\epsilon$, the exploration rate, is sufficiently small. In Q-learning, $\epsilon$ decreases over the number of rounds, and it can take millions of rounds to reach a small enough $\epsilon$ for the collusive equilibrium to occur.
+
+However, this framework does not explain the collusive convergence in some settings. For example, \cite{asker2023impact} examined a scenario where $\delta=0$, in which the theoretically sustainable collusive equilibrium should not exist, yet numerical results still converge to a supra-competitive outcome. This suggests that the theory presented in \cite{den2022artificial} does not provide a full picture of the dynamics of Q-learning in pricing problems.
+
+To date, there is \textbf{no universal} conclusion on the cause of algorithmic collusion by the reinforcement learning algorithm. While ample evidence suggests that both genuine and spurious collusion are driven by imperfect exploration, there remains a lack of analytical proof to support this assertion. Here, I survey some research that seeks to address the fundamental question: why can Q-learning, along with other reinforcement learning algorithms, lead to collusive convergence in an oligopoly market?
+
+\cite{banchioartificial} proposes that algorithmic collusion relies on an endogenous statistical linkage within the Q-values, which they term \textit{spontaneous coupling}. Spontaneous coupling arises from the correlation of Q-values due to the updation being dependent on both firms' actions. When the algorithm estimates the Q-value for the collusive price, it actually estimates the Q-value for the collusive price, conditioning the opponent using a collusive price. Conversely, the estimated Q-value for the competitive price is conditioned on the opponent using the competitive price. This can lead to an overestimation of the Q-value for higher prices. The paper presents sufficient conditions when spontaneous coupling does not occur\footnote{see figure 6 in \cite{banchio2022artificial}. The existence of a collusive equilibrium is contingent on both the payoff function and the exploration rate; typically, a higher exploration rate reduces the likelihood of a collusive equilibrium forming.}: under synchronous updating Q-learning, coupling does not occur due to the uniform learning rate across different actions. This theorem aligns with the numerical results presented in \cite{asker2022artificial}, which found that perfect synchronous Q-learning leads to a Nash equilibrium.
+
+\cite{dolgopolov2024reinforcement} employs evolutionary game theory to analyze the convergence of \textbf{state-free} Q-learning agents in a prisoner’s dilemma game. The theoretical analysis indicates that:\footnote{See proposition 3, corollary 4 and 5 from \cite{dolgopolov2024reinforcement} for more details.}:
+\begin{enumerate} 
+    \item In the absence of exploration, state-free Q-learning would converge to the static Nash equilibrium; 
+    \item When both agents use logit (Boltzmann) exploration, the convergence is contingent upon a closed-form relationship between the learning rate and the payoffs (see figure \ref{fig:dolgopolov_fig2}). 
+\end{enumerate}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.3\linewidth]{pic/dolgopolov_fig2.png}
+    \caption{\\ \tiny The figure depicts the relationship between the learning rate and the payoffs, with $\alpha$ representing the learning rate, $\pi_{CC}$ being the payoff when both firms collude, $\pi_{NN}$ being the payoff when both firms use the Nash price, and $\pi_{CN}$ being the payoff when one firm tries to collude while the other deviates. This is copied from figure 2 in \cite{dolgopolov2024reinforcement}.}
+    \label{fig:dolgopolov_fig2}
+\end{figure}
+
+The first statement contradicts the numerical experiments in \cite{asker2022artificial}, where firms in a Bertrand model employed greedy state-free Q-learning but still charged supra-competitive prices. This suggests that the analytical results from \cite{dolgopolov2024reinforcement}, based on a simple prisoner's dilemma game with a limited action space, may not be universally applicable. Minor variations in the environment can significantly alter the generality of a theorem.
+
+The aforementioned theoretical research primarily concentrates on toy models with symmetric parameters for competing firms. \cite{brown2023competition} examine the asymmetric setting where firms can price based on an opponent's most recent price and find that the price level will be supra-competitive under the MPE. The research above has collectively concluded that, under specific circumstances and parameter settings, the use of simple Q-learning or other algorithms that condition on an opponent's previous price can lead the game to converge to a collusive scenario, with some of these convergences representing well-defined equilibrium.
+
+\subsubsection{Theoretical Evidence beyond Reinforcement Learning}
+\label{subsubsec:beyond}\textbf{}
+
+Some studies have provided analytical proof of collusion potential under other algorithms beyond the scope of reinforcement learning. \cite{aouad2021algorithmic} demonstrated that even a simple $\epsilon$-greedy algorithm can lead a duopoly assortment game converging to a collusive outcome, rather than the equilibrium in the assortment game (\cite{besbes2016product}). \cite{cho2024collusive} proved that firms using a simple model averaging and least squares estimation to price converge to a collusive scenario in a linear Bertrand duopoly setting. What's more, the convergence is not contingent on any channel including the patient-player assumption, suggesting that the algorithm can lead to higher prices even without a reward-punishment scheme.
+
+Another study of algorithmic collusion that has been rigorously established is presented in \cite{lamba2022pricing}. In this model, two firms are selling a homogeneous product within the same market, with each firm dynamically pricing their goods solely based on the opponent's price during the last epoch. The pricing strategies are distilled to a few, including always using the monopoly price, always using the collusive price, tit-for-tat, and reverse tit-for-tat. The authors have proved that under the Markov Perfect Equilibrium, the average price set by both firms is supra-competitive.
+
+Some insights can also be drawn from studies of collusion in Cournot games such as \cite{shi2020multi}, which demonstrated that the policy-gradient algorithm can converge to the Nash equilibrium in a Cournot game under certain conditions, including when the price function is linear or when the market is duopolistic. Additionally, \cite{possnig2023reinforcement} derived sufficient conditions for actor-critic algorithms to learn collusion in a duopoly Cournot model.
+
+\subsection{Empirical Evidence of Algorithmic Collusion}
+\label{subsec:empirical}
+
+The most compelling empirical evidence comes from \cite{clark2023algorithmic}. The authors utilize price data from the German gasoline market in this study. They focus on a specific market structure: the duopoly market, where two gas stations operate within a nearby region. They identify the timing when each gas station starts to use algorithms to price and conduct the following regression:
+\[
+y_{mt}=\alpha_m+\alpha_t+\beta_1T_{mt}^1+\beta_2T_{mt}^2+\epsilon_{mt},
+\]
+where $y_{mt}$ represents the price margin in market $m$ at time $t$, and $T_{mt}^1$ and $T_{mt}^2$ are dummy variables that indicate whether market $m$ at time $t$ has only one or two gas stations using algorithms to price, respectively. Using instrumental variables, the authors identify that in duopoly markets, the adoption of algorithmic pricing by a single firm does not significantly affect the price margin, whereas the adoption by both firms can increase station-level margins by 28\%\footnote{Furthermore, \cite{clark2023algorithmic} provide evidence that margins do not increase until about a year after market-wide adoption, suggesting that the price increase is due to the algorithm's active learning on how to avoid competition. This indicates that the algorithmic collusion observed in the gasoline market is genuine rather than spurious.}.
+
+\cite{wieting2021algorithms} shows the evidence of algorithmic collusion intuitively, figure \ref{fig:wieting_fig11} depicts the correlation coefficient between the market price and the number of firms implementing algorithmic pricing. In a duopoly market ($comp=2$), the price where two firms use algorithms is significantly higher than when only one firm uses algorithms, suggesting algorithmic collusion.
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.45\linewidth]{pic/wieting_fig11.png}
+    \caption{\\ \tiny This picture shows the correlation coefficient between the price and the number of firms using algorithms. $Comp$ indicates the number of competing firms in each cluster, $N.Algo$ is the number of firms using algorithms. This is copied from figure 11 in \cite{wieting2021algorithms}.}
+    \label{fig:wieting_fig11}
+\end{figure}
+
+Another empirical evidence comes from \cite{musolff2022algorithmic}, which reveals that the mean price in Amazon's marketplace tends toward the monopoly price under algorithmic pricing. However, all empirical studies only indicate that algorithmic collusion can occur, without specifying that the algorithms used are necessarily RL algorithms. The inner mechanisms behind such tacit collusion remain opaque or as a `black box.'\footnote{some other research indicates that algorithmic pricing may not solely result in price increases. For instance, \cite{calder2023coordinated} has identified that algorithms can set more responsive prices i.e. the prices set by algorithms can more effectively adapt to dynamic demand.}
+
+\subsection{Concluding Remarks on Algorithmic Collusion under RL}
+\label{subsec:remark}
+
+In this part, I will offer a brief conclusion based on my own reflections.
+
+Many numerical studies have shown that using reinforcement learning algorithms to set prices in competitive markets can lead to supra-competitive pricing, often supported by a reward-punishment scheme that sustains collusion. These numerical findings have also been supported by a range of theoretical and empirical evidence, although not exhaustive. Theoretical results support that under certain conditions\footnote{Depending on parameters such as the payoff function, learning rate, exploration rate, and Q-value updating scheme.}, using RL algorithm to pricing can converge to the collusive outcome. Although these theories are primarily based on the prisoner’s dilemma game, their insights align with the results of numerical experiments conducted in more complex settings\footnote{For instance, Theorem 3 from \cite{banchio2022artificial} concurs with the numerical findings in \cite{asker2023impact} when employing a perfect synchronous updating scheme. Figure 1 from \cite{den2022artificial} sheds light on why, in \cite{abada2023artificial}, when the authors doubled the exploration probability every epoch, social welfare increased.}. On the other hand, empirical evidence has identified that using algorithms to price, which may not necessarily involve RL algorithms, can raise the market price in a competitive market.
+
+These numerical, analytical, and empirical evidence, while not complete, reveal that algorithmic collusion is a problem that deserves consideration. Critics may argue that the collusion, including the reward-punishment scheme, is not a well-defined equilibrium and that simple reinforcement learning algorithms can be outperformed by others, making RL algorithms a \textit{dominated strategy} for pricing. My perspective is: algorithmic collusion (including both spurious and genuine collusion), does not require a complete theoretical framework to justify its existence. It is observed to occur in both simulations and the real market.
+
+\begin{center}
+    \textbf{The convergence of a pricing game under RL algorithm does not need to be a theoretically well-defined equilibrium.} 
+\end{center}
+
+For example, most of the numerical studies in \cite{asker2022artificial} assume $\delta=0$, suggesting that there is no room for any collusive equilibrium to exist. However, Q-learning can still converge to supra-competitive outcomes in some numerical experiments. Addressing the incomplete nature of algorithmic collusion under RL is a meaningful discussion, but this does not negate the significance of algorithmic collusion under RL algorithms. This is why I summarize the three types of algorithmic collusion in Section \ref{sec:intro}. 
+
+However, these critiques have raised a significant question: Is there an algorithm that can learn to collude with a theoretical guarantee and without any mechanism that could break? This question introduces the concept of \textit{authentic collusion}, which I will elaborate on in the subsequent section.
+
+\section{Authentic Algorithmic Collusion}
+\label{sec:authentic}
+
+All algorithmic collusions in Section \ref{sec:acrl}, whether exhibiting a reward-punishment scheme, fall under the category of spurious or genuine collusion. This is because other pricing strategies may outperform the RL algorithm, exploiting unobservable weaknesses to gain a higher cumulative payoff. The core of authentic algorithmic collusion lies not only in the analytical guarantee of convergence to a supra-competitive outcome, but also in its resilience against other pricing algorithms. 
+
+\subsection{A Rigorous Definition of Algorithmic Collusion}
+\label{subsec:rigorous}
+
+\cite{den2023mathematical} offers a fantastic definition of algorithmic collusion for the duopoly market. Here, I provide a summary that encapsulates the essence of this definition. Consider a repeated game between two firms, denoted by $i = 1$ and $i = -1$, where both firms are selling a homogeneous product. At each discrete time step $t \in \mathbb{N}$, each firm selects a price $P_{it}$ from a set of feasible prices $\mathcal{P}_i$. The demand $D_{it}, D_{-it}$ obtained by firms at time $t$ is drawn from the \textbf{demand function} $d(\mathbf{P}_t)$, where $\mathbf{P}_t$ is the vector of prices. The demand function is assumed to be independent of the history of the game, meaning that for a given price pair $\mathbf{P}$, the demand $D_i$ and $D_{-i}$ follow the distribution $d(\mathbf{P})$ that is constant over time. After observing the demand $D_{it}$, each firm receives a revenue $R_{it} = P_{it} \cdot D_{it}$. The structure of this game is denoted by the tuple $(\mathcal{P}_1, \mathcal{P}_{-1}, d)$.
+
+Most research assumes that prices are publicly known, while the demand $D_{it}$ remains private information\footnote{There is an expectation, see \cite{meylahn2022learning}.}. The demand function $d$ is unknown to the firms, who must learn the market environment by setting prices using algorithms to interact with their competitors. 
+
+The algorithm (pricing strategy) $\pi_i\in \Pi_i$ is defined as the mapping from the \textit{state} $H_{it} := (P_{is}, P_{-is}, D_{is} \, \text{ for} \, 1 \leq s \leq t)$ to the probability distribution over the action space $\mathbb{P}(\mathcal{P}_i)$. Given that the game is solely dependent on $d(\cdot)$ and the algorithms used by firms, the expected cumulative reward for each firm can be denoted as:
+\[
+\phi_i(\pi_i,\pi_{-i},d)
+\]
+It's untractable to compute the best response against an algorithm, so the \textit{regret} of an algorithm is defined as the difference from the reward under the \textbf{optimal fixed} action given the opponent's algorithm $\pi_{-i}$ and the demand function $d(\cdot)$.
+\[  
+Regret_i(\pi_i,\pi_{-i},d):=\sup_{P_i^*\in \mathcal{P}_i} \phi_i(P_i^*,\pi_{-i},d) - \phi_i(\pi_i,\pi_{-i},d)
+\]
+Now, we can formally define algorithmic collusion\footnote{In this survey, the framework of the pricing game is akin to that presented in the original work \cite{den2023mathematical}. However, to help readers understand the connections between various types of collusion, there is a notable difference in the definition of authentic algorithmic collusion from the original text. \cite{den2023mathematical} treats the collusive and alternative algorithms as sets of algorithms and provides a more precise definition.}. We say a pair of algorithms $\tilde{\pi}_i, \tilde{\pi}_{-i}$ can lead to authentic algorithmic collusion under the demand function $d(\cdot)$ if they satisfy:
+
+\begin{enumerate}
+    \item The algorithm, as described earlier, is designed to operate solely based on historical prices and demands, implicitly assuming that there is no illegal communication between the two firms.
+    \item Algorithmic collusion needs to achieve supra-competitive payoffs. We denote $\phi_i^{comp}(d)$ as the expected payoff during a fully competitive setting, which is typically defined as the payoff under one-stage Nash Equilibrium prices. For each firm $i = \pm 1$:
+    \[
+        \phi_i(\tilde{\pi}_i, \tilde{\pi}_{-i}, d) \geq \phi_i^{comp}(d)
+    \]
+    \item A `smart' collusion must have a good enough performance against alternative algorithms. For any $\pi_{-i} \in \Pi_{-i} / \tilde{\pi}_{-i}$ and some $\epsilon \geq 0$\footnote{$\epsilon$ can be regarded as a pre-determined parameter indicating the performance requirement.}, the regret of the collusive algorithm pair must satisfy:
+    \[
+        Regret_i(\tilde{\pi}_i, \pi_{-i}, d) \leq \epsilon
+    \]
+    \item Finally, based on the preceding requirements, a collusion can be considered \textbf{authentic collusion}\footnote{In \cite{den2023mathematical}, a further requirement that the collusion does not assume synchronization is not emphasized in this paper.} if it meets an additional criterion: given that the opponent employs the collusive algorithm $\tilde{\pi}_{-i}$, the best response is to also use the collusive algorithm $\tilde{\pi}_i$. For each firm $i = \pm 1$, and for any $\pi_{i} \in \Pi_{i} / \tilde{\pi}_{i}$:
+    \[
+        \phi_i(\tilde{\pi}_i, \tilde{\pi}_{-i}, d) \geq \phi_i(\pi_i, \tilde{\pi}_{-i}, d)
+    \]
+\end{enumerate}
+
+It is crucial to note that the reward-punishment scheme presented in Section \ref{sec:acrl} can not satisfy the third requirement. Because the opponent's deviation, as described in previous literature, is only a subset of alternative algorithms. A huge limitation of this survey is that this framework does not intuitively distinguish between genuine collusion and authentic collusion, because it's challenging to define deviation using rigorous notations.
+
+In summary, the hierarchy of the three types of algorithmic collusion mentioned in Section \ref{sec:intro} can be more intuitively characterized as follows:
+\begin{enumerate}
+    \item \textit{Spurious collusion}: No illegal communication but can achieve supra-competitive outcomes;
+    \item \textit{Genuine collusion}: Based on the preceding requirements, the collusive algorithm should exhibit a reward-punishment scheme toward deviation (a subset of alternative algorithms);
+    \item \textit{Authentic collusion}: Based on the preceding requirements, the collusive algorithm should have low regret against all alternative algorithms and is the best response to the collusive algorithm.
+\end{enumerate}
+
+\subsection{Some Examples of Authentic Algorithmic Collusion}
+
+Currently, two papers have proposed authentic collusion algorithms\footnote{These two papers may be quite technical for the researcher in Econ/OM. I recommend that readers interested in this topic watch this \href{https://www.youtube.com/watch?v=QmazguF7myY}{presentation} given by Arnoud den Boer.}.
+
+\cite{meylahn2022learning} introduce the first auto-collusive algorithm with guaranteed theoretical performance and convergence speed. The logic of this collusive algorithm is as follows: given the demand information is public, the firms can estimate the collusive prices and the revenue under the collusion, as well as the competitive prices and the revenue under the Nash equilibrium. The firm can then choose to collude or compete by determining which mode is more profitable. The algorithm will continue to perturb and update its estimations during the exploitation stage to mitigate regret in the event of deviations.
+
+Following the notation introduced in Subsection \ref{subsec:rigorous}, we can define the joint revenue function of the two firms as $r(\mathbf{P}_{t})=\sum_{i\in \{1,-1\}} P_{i,t}\cdot d(\mathbf{P}_{t}))$. The authors impose certain assumptions\footnote{Refer to assumption 1 in \cite{meylahn2022learning}; these assumptions mainly entail that the collusive price pair is unique and that the regions nearing $\mathbf{P}^{col}$ exhibit sufficient steepness to ensure the convergence speed of the gradient algorithm.} on the joint revenue function $r$ to enable the firms to employ gradient ascent algorithms to learn the collusive prices $\mathbf{P}^{col}$.
+\[  
+    \mathbf{P}^{col} = \arg\max_{\mathbf{P}} r (\mathbf{P})
+\]
+More specifically, each firm maintains an estimation $\hat{p}_i^{col}(n)$, where $n$ is a counter. In each two consecutive time periods, the firm charges $\hat{p}_i^{col}(n)+c_n \omega_i^{col}(n)$ and $\hat{p}_i^{col}(n)-c_n \omega_i^{col}(n)$, where $c_n$ is a tuning sequence and $\omega_i^{col}(n)$ is a random variable equals $1$ and $-1$, both with probability $\frac{1}{2}$. After observing the demands, the joint revenue $\tilde{r}^+$ and $\tilde{r}^-$ during the two periods can be calculated, then each firm can obtain the gradient of $r(\cdot)$ using:
+
+\begin{equation}
+\label{eq:gradient}
+    \hat{\nabla}r(n):=\frac{\tilde{r}^+ - \tilde{r}^-}{2c_{n}\omega_{i}^{col}(n)}
+\end{equation}
+
+After that, the firms can update $\hat{p}_i^{col}(n)$:
+
+\begin{equation}
+    \hat{p}_{i}^{col}(n+1)=\mathcal{P}_{i}\Bigg(\hat{p}_{i}^{col}(n)+a_{n}\hat{\nabla}r(n)\Bigg),
+\end{equation}
+
+where $\mathcal{P}_{i}$ is a projection operator to bound $\hat{p}_{i}^{col}(n+1)$ and $a_n$ is the learning rate sequence. This scheme is called Simultaneous Perturbation Kiefer–Wolfowitz recursions, which is a well-known method to stochastically estimate the maximum of a function.
+
+It is important to note from equation \ref{eq:gradient} that to compute the gradient $\hat{\nabla}r(n)$, each firm requires knowledge of the opponent's demand information, which is a fundamental assumption in the algorithm. This assumption is plausible in some settings, as many e-commerce retailers now disclose their real-time inventory levels, thereby allowing competitors to infer demand at each interval.
+
+Using the same methodology, the algorithm can employ the Simultaneous Perturbation Kiefer–Wolfowitz recursion to estimate $\hat{p}_i^{com}(n)$, which is the Nash equilibrium prices. The algorithm then determines whether setting $\hat{p}_i^{col}(n)$ or $\hat{p}_i^{com}(n)$ would be more profitable. Finally, the algorithm would transition to the exploitation stage. The complete algorithm is termed the composite SPSA (Simultaneous Perturbation Stochastic Approximation) algorithm, which splits the (infinite) time horizon into repeating cycles, and each cycle comprises five stages:
+
+\begin{enumerate}
+    \item \textit{Collusive exploration}: using the Simultaneous Perturbation Kiefer–Wolfowitz recursion to estimate $\hat{p}_{i}^{col}$;
+    \item \textit{Collusive estimation}: set the price statically at $\hat{p}_{i}^{col}$, and obtain an accurate estimation of the revenue under the prices $\hat{\mathbf{p}}^{col}$;
+    \item \textit{Competitive exploration}: using the Simultaneous Perturbation Kiefer–Wolfowitz recursion to estimate $\hat{p}_{i}^{com}$;
+    \item \textit{Competitive estimation}: set the price statically at $\hat{p}_{i}^{com}$ to obtain an accurate estimation of the revenue under the prices $\hat{\mathbf{p}}^{com}$;
+    \item \textit{Exploitation}: The firm will decide whether to use $\hat{p}_{i}^{col}$ or $\hat{p}_{i}^{com}$, and during this process, the Simultaneous Perturbation Kiefer–Wolfowitz recursion will continue to be employed.
+\end{enumerate}
+
+The authors demonstrated that when both firms employ the composite SPSA algorithm, $\hat{p}_{i}^{col}$ and $\hat{p}_{i}^{com}$ will converge to $p_{i}^{col}$ and $p_{i}^{com}$, respectively with a sublinear convergence rate. The market will converge to the collusive scenario if collusion is more profitable. What's more, the performance against the reaction function is guaranteed, and it represents the best response when the opponent uses the same algorithm, making it the first authentic collusive algorithm. The composite SPSA has two main drawbacks:
+
+\begin{enumerate}
+    \item It requires knowledge of the mutual demand function.
+    \item The SPSA algorithm requires synchronization. i.e. if the two firms do not initiate the same algorithm simultaneously, they may not end up charging the collusive prices.
+\end{enumerate}
+
+\cite{loots2023data} propose the Collude-or-Compete algorithm that solves the above two drawbacks under the multinomial logit demand. Assume that at each period, the consumer would buy the products from firm $i$ with probability:
+
+\begin{equation}
+    \lambda_i(\mathbf{p};\theta):=\frac{\nu_i(p_i;\theta)}{1+\sum_{i={1,-1}}\nu_i(p_i;\theta)},
+\end{equation}.
+
+where $\theta$ is a parameter unknown to the firms. The no-purchase probability is given by $\lambda_0(\mathbf{p};\theta):=\frac{1}{1+\sum_{i={1,-1}}\nu_i(p_i;\theta)}$. A valuable property of the multinomial logit demand function is that when one firm observes a demand of $1$, it can infer that the opponent has a demand of $0$; conversely, when one firm observes a demand of $0$, it can infer that the opponent has a demand of either $0$ or $1$. The core of this collusive algorithm is that firms can reveal their demand through public prices, and the information of mutual demands enables the firms to consistently estimate $\theta$, which provides the opportunity to sustain collusion.
+
+Here I summarize several important notes on the Collude-or-Compete algorithm:
+
+\begin{enumerate}
+    \item The algorithm consists of two modules: the collusive module and the competitive module. The algorithm starts with the collusive module, and will switch to the competitive module once it finds that the opponent doesn't use the collusive module.
+    \item In the competitive module, the algorithm employs a Kiefer-Wolfowitz recursion similar to that in \cite{meylahn2022learning} to set prices, which allows it to learn the best response to the opponent's pricing. After a certain number of periods, the algorithm reverts to the collusive module.
+    \item During the collusive module, the algorithm utilizes publicly observable prices to disclose private information. Specifically, there are two types of private information:
+        \begin{itemize}
+            \item First, the prices can reveal demand information. In the collusive module, it estimates $\theta$ using maximum-likelihood estimation by maximizing:
+            \begin{equation}
+            \label{eq:mle}
+                L_{t-1}(\theta):=\prod_{s\le t-1} \lambda_i(\mathbf{p}_s;\theta)^{d_{is}}\lambda_{-i}(\mathbf{p}_s;\theta)^{d_{-is}}\lambda_0(\mathbf{p}_s;\theta)^{1-d_{is}-d_{-is}}
+            \end{equation}
+            This estimation requires knowledge of the opponent's demand information $d_{-is}$. The method of revealing demand is as follows: each firm maintains three estimates for $\theta$: $\hat{\theta}_{i,t}^{(0,0)}$, $\hat{\theta}_{i,t}^{(0,1)}$, and $\hat{\theta}_{i,t}^{(1,0)}$, which are updated using equation \ref{eq:mle} under the assumption that the demands at time $t$ are $(0,0)$, $(1,0)$, and $(0,1)$, respectively. The firm can then calculate the collusive prices $\mathbf{P}_t^{(0,0)}$, $\mathbf{P}_t^{(0,1)}$, $\mathbf{P}_t^{(1,0)}$ accordingly. It is important to note that if prices are public the demands are known to both firms and they start the collusive module simultaneously, $\hat{\theta}_{i,t}^{(\cdot,\cdot)}$ and $\hat{\theta}_{-i,t}^{(\cdot,\cdot)}$ should be identical at every period $t$, and the calculated collusive price pairs should also be identical.
+            
+            If firm $i$'s demand at time $t$ is $1$, then at time $t+1$ the algorithm will set the price $\mathbf{P}_{it}^{(1,0)}$; conversely, if firm $i$'s demand at time $t$ is $0$, although firm $-i$'s demand is unknown, the algorithm will set the price $\mathbf{P}_{it}^{(0,0)}$. However, at time $t+1$ the firm can infer that the demand of firm $-i$ at time $t$ is $0$ ($1$) if the opponet is posing price at $\mathbf{P}_{-it}^{(0,0)}$ ($\mathbf{P}_{-it}^{(0,1)}$). This `reverse engineering' enables firms to communicate demand information solely through public price information.
+            
+            \item Second, the price can reveal timing information to synchronize the switching of the two modules for the two firms. It can be observed that the collusive module can only learn the collusive prices when both firms start using the collusive module simultaneously. In fact, during the first two time periods of the collusive module, the algorithm charges $p_{start,i}$ and $\kappa p_{start,i}$, where $0<\kappa<1$ is a fixed constant. Although $\kappa$ is unknown to the opponent, this structured pricing data can help opponents learn the timing of the beginning of the collusive module.
+        \end{itemize}
+    \item The Collude-or-Compete algorithm is demonstrated to be resistant against other competitive pricing algorithms and is its own best response. Theoretical guarantees for convergence to supra-competitive prices are also provided, making it the first authentic collusive algorithm that does not rely on the demand being public.
+\end{enumerate}
+
+The composite SPSA algorithm (\cite{meylahn2022learning}) and the Collude-or-Compete algorithm (\cite{loots2023data}) are both authentic collusive algorithms with theoretical guarantees. Their presence indicates that algorithmic collusion may be more achievable than some regulators currently believe. The property that both algorithms need to know (or infer) the opponent's demand corresponds with \cite{garcia2023dynamic}, which suggests that the market price will increase in a duopoly pricing game when private stock information is shared. Currently, no authentic collusive algorithm has been developed without utilizing (including estimating) the opponent's demand information.
+
+\section{Regulate Algorithmic Collusion}
+\label{sec:reglate}
+
+\subsection{Mutual Impact Between Algorithmic Collusion and the Market}
+\label{subsec:impact}
+
+Algorithmic collusion is detrimental to consumer welfare by inflating prices. However, research has revealed that the implications of algorithmic collusion for the market may extend beyond mere price increases. \cite{yang2023regulating} considers a duopoly market where each firm has a segment of \textit{captive} customers who will only purchase from that firm and a segment of \textit{contested} customers who may choose to buy from either firm. The firms can implement price discrimination across these different consumer segmentations and the regulator can enforce fairness regulations by requiring each firm to maintain a smaller price gap between the two market segments. A very interesting finding is that, numerically and analytically, the authors demonstrate that implementing fair pricing regulations can actually increase the likelihood of genuine collusion in some settings. 
+
+Several other studies have centered on the market’s influence on the emergence of algorithmic collusion. \cite{miklos2019collusion} develop an analytical model in which the consumer's willingness to pay (demand) is unknown to the firms. It is found that more accurate demand forecasting algorithms can reduce potential opportunities for collusion. \cite{johnson2023platform}, \cite{xu2023algorithmic} investigate algorithmic collusion in online platforms where the platform's recommender system can segment the market into multiple sub-markets. In this market, sellers determine prices for various products through Q-learning. Not all products are accessible to every consumer; the platform recommends a bundle to consumers that includes a selection of products. \cite{johnson2023platform} discovers that by restricting the size of the product assortment\footnote{The recommender system is analogous to the assortment optimization problem for the platform, although neither paper explicitly uses this term.}, the market price set by the firms tends to decrease (see Figure \ref{fig:johnson_fig5}). \cite{xu2023algorithmic}'s numerical experiments reveal that the occurrence of algorithmic collusion via Q-learning depends on the platform's recommendation strategy: a profit-oriented recommender system tends to result in algorithmic collusion, whereas a demand-based system fosters competitive prices.
+
+\subsection{Regulatory Measures for Curbing Algorithmic Collusion}
+\label{subsec:curb}
+
+Among the existing research, three approaches have emerged for curbing algorithmic collusion: The first strategy entails the direct inspection of firms' pricing algorithms (\cite{harrington2018developing}, \cite{hartline2024regulation}). The second approach involves intervention in the market, where authorities utilize reward-punishment mechanisms to deter collusion directly (\cite{abada2023artificial}). The third tactic focuses on designing market structures that inherently block algorithmic collusion (\cite{johnson2023platform}).
+
+\cite{harrington2018developing} is the first research addressing the regulation of algorithmic collusion, noting that currently there is no legal framework to regulate algorithmic collusion due to the difficulty in identifying the reward-punishment scheme. The author suggests that new laws should be enacted to inspect the internal algorithms used for pricing. For instance, regulators could input data similar to forced deviations in \cite{calvano2019algorithmic} into the algorithm, to determine if the algorithm generates prices with prohibited properties. This proposal may be too broad, and \cite{hartline2024regulation} further provides a more practical approach to audit.
+
+\cite{abada2023artificial} introduces an alternative method. They study an electricity market where multiple firms sell or buy electricity units. The authors discovered that firms can rapidly learn to make seemingly collusive decisions under the Q-learning algorithm. Through numerical experiments, several methods are found to mitigate this collusive behavior:
+
+\begin{enumerate}
+    \item Increasing the number of firms in the market can shift the game towards a competitive scenario. This aligns with prior findings of the \textit{number effect} discussed in Subsection \ref{subsec:criticize}.
+    \item Regulators can actively intervene in collusion by acting as a firm within the market. Specifically, the regulator can implement a simple reward-punishment strategy, such as bidding aggressively when the market appears collusive and bidding conservatively when the market appears competitive. Numerical results indicate that this strategy can substantially enhance market welfare (see Figure \ref{fig:abada_fig7}).
+\end{enumerate}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.45\linewidth]{pic/abada_fig7.png}
+    \caption{\\ \tiny The figure depicts the dynamic of social welfare under different settings, where the blue line represents the regulator using the reward-punishment strategy and the green line represents the three-firm competing scenario. This is copied from figure 7 in \cite{abada2023artificial}.}
+    \label{fig:abada_fig7}
+\end{figure}
+
+The authors also test alternative strategies. For example, they employ the same Q-learning algorithm, but instead of using the payoff as the reward, the regulator could use the instantaneous welfare\footnote{See equation B.1 in \cite{abada2023artificial}} to update the Q-learning. However, experiments revealed that this approach has little impact on alleviating algorithmic collusion.
+
+\cite{johnson2023platform} centers on strategies to deter algorithmic collusion for platform owners. In this context, multiple firms employ Q-learning to set their prices, while the platform determines the assortment of products recommended to consumers. The platform's payoff includes both a commission fee derived from the total transactions and social welfare, indicating that the platform is interested in preventing widespread algorithmic collusion. The authors design some simple recommendation strategies which require little information to sustain the algorithmic collusion of the firms, the strategy contains two important features\footnote{The first feature is derived from the PDP rule, while the second feature is derived from the DPDP rule, as detailed in Definitions 1 and 2 respectively from \cite{johnson2023platform}.}:
+
+\begin{enumerate}
+    \item Limit the size of the assortment. The market will be more competitive when the number of recommended products decreases.
+    \item Recommend the lowest-priced product first, and if no other firm offers products with a significantly lower price, then never recommend the products of other firms.
+\end{enumerate}
+
+Figure \ref{fig:johnson_fig5} presents the simulation results, with $\gamma$ representing the parameter that controls the probability of recommending only one product; a lower $\gamma$ value indicates a smaller assortment size. The red curve illustrates a stronger strategy, where the platform switches its recommendation set only when another firm significantly reduces the price beyond the current lowest price. It is evident that these measures are effective in mitigating algorithmic collusion.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.4\linewidth]{pic/johnson_fig5.png}
+    \caption{\\ \tiny The figure depicts the market price given different $\gamma$ and recommendation strategies. This is copied from figure 5 in \cite{johnson2023platform}.}
+    \label{fig:johnson_fig5}
+\end{figure}
+
+\section{Conclusion and Furthur Research Oppurtunities}
+\label{sec:conclusion}
+
+In conclusion, the past and present research can be organized into the following insights:
+
+\begin{itemize}
+\setlength{\itemsep}{0.45em}
+    \item Many numerical studies have demonstrated that Q-learning and some other reinforcement learning algorithms can lead to supra-competitive prices in oligopoly pricing games.
+    \item Some theoretical work proves that, under appropriate parameters, Q-learning (as well as some other algorithms) can converge to collusive prices in certain simple settings. Some of the convergences achieved are well-defined equilibriums, whereas the majority are not.
+    \item Empirical evidence has identified that algorithmic pricing (not necessarily RL algorithms) can increase prices under competitive conditions;
+    \item Although the current evidence is incomplete, and the seeming collusion is widely believed to be due to imperfect exploration, it still poses a great threat to social welfare because algorithmic collusion does not need to be a theoretically well-defined equilibrium; it just happens there.
+    \item Collusions observed under RL algorithms can be categorized as spurious or genuine based on whether they exhibit a reward-punishment scheme for deviation. However, these types of algorithms can be outperformed by alternative algorithms, making them not likely to be practiced.
+    \item Authentic collusion is a robust definition of algorithmic collusion, which must perform well against all alternative algorithms and be the best response toward itself (This has been beyond the scope of reinforcement learning). 
+    \item Authentic collusive algorithms have been developed, but current versions require to know (or infer) the opponent's demand information. 
+    \item Algorithmic collusion can be mitigated by the number effect. Regulatory intervention through active participation in the market, employing a reward-punishment strategy, can largely eliminate collusion.
+    \item The design of online platforms can influence algorithmic collusion. Specifically, the platform's recommender system, which determines products that are visible to customers, can block or intensify algorithmic collusion.
+\end{itemize}
+
+The previous research on algorithmic collusion can be broadly classified into two groups based on different directions:
+\begin{enumerate}
+    \item Most research focuses on \textbf{convergence}, inspecting the dynamics of the games under different pricing algorithms, environments, and regulations. Representative works include \cite{calvano2020artificial}, \cite{asker2022artificial}, \cite{hansen2021frontiers}, \cite{dolgopolov2024reinforcement}, \cite{meylahn2022learning}, \cite{johnson2023platform}.
+    \item Other research focuses on \textbf{equilibrium}, studying whether the pricing model could facilitate the occurrence of collusion. Representative works include \cite{den2022artificial}, \cite{brown2023competition}, \cite{miklos2019collusion}, \cite{yang2023regulating}.
+\end{enumerate} 
+From my perspective, the study of algorithmic collusion should focus more on convergence. As noted before, the collusive scenario does not need to be any equilibrium, it's the outcome of the convergence of algorithms\footnote{Some theories fail to explain the numerical results because they rely too much on the analysis of equilibrium. For example, the $\delta-\epsilon$-equilibrium proposed in \cite{den2022artificial}fails to explain some collusive outcomes in \cite{asker2022artificial}.}. Given the substantial threat and impact of algorithmic collusion on social welfare, it is vital to delve deeper into this topic. Future research could explore the following directions:
+
+\begin{enumerate}
+\setlength{\itemsep}{1.2em}
+    \item First, more numerical research could be conducted.
+        \begin{itemize}
+        \setlength{\itemsep}{0.55em}
+            \item To date, the environmental settings in past numerical studies are quite simplified. Previous research usually assumed infinite capacity\footnote{\cite{abada2023artificial} is one exception.}, no ordering cost, and model customer decision-making using a simple demand function. Future research could expand to more realistic settings, and consider inventory constraints and strategic consumer behaviors. Incorporating these constraints can make the simulations more representative of reality.
+            
+            \item Current numerical research in pricing games has primarily focused on `static strategies', where the action space in the algorithms consists of deterministic prices. Future research could consider molecular strategies, such as \textit{tit-for-tat} and \textit{copycat} strategies similar to those considered in \cite{kimbrough2005learning}.
+            
+            Incorporating these `dynamic strategies' into the action space allows the simulation outcomes to be more intuitively explained. Under the traditional action space, we can only determine whether an algorithm exhibits a reward-punishment scheme by inputting specific data and observing whether the output prices conform to certain patterns. However, this approach has defects; for example, \cite{epivent2024algorithmic} demonstrates that the reward-punishment scheme can respond not only to price decreases but also to price increases. In numerical experiments where the action space is composed of molecular strategies, the convergence of the Q-matrix can reveal the pricing strategy learned by the algorithms.
+
+            \item A pressing concern arises within online platforms. Currently, many platforms, such as Airbnb and eBay, provide price recommendations to sellers operating on their platforms, with the final pricing decision left to the firms themselves. \cite{hunold2023algorithmic} conducted laboratory experiments to demonstrate that when platforms use collusive strategies to recommend prices, the market price could be altered\footnote{It should be noted that in \cite{hunold2023algorithmic}, contrary to intuition, the collusive pricing recommendation sometimes resulted in a lower market price compared to the baseline setting where the platform did not recommend prices.}. While platforms may not be so greedy in recommending prices through collusive strategies, it is natural for platforms to employ algorithms, such as Q-learning, to suggest prices. Whether Q-learning's recommendations can lead to collusive outcomes in the online market presents an intriguing avenue for further investigation.
+            
+            \item Another direction for numerical research is inspired by \cite{spann2024algorithmic}. Beyond algorithmic collusion, can AI pricing algorithms lead to unfair pricing and facilitate automatic price discrimination in other market environments? This is a question that deserves further exploration. 
+
+            \item Furthur research could investigate whether AI algorithms would lead to algorithmic collusion in other disciplines, such as the financial markets (\cite{contDynamicsMarketMaking2024}, \cite{dou2024ai}), auction games (\cite{banchio2022artificial}, \cite{banchioartificial}), assortment optimization (\cite{aouad2021algorithmic}), airline revenue management (\cite{gu2023can}).
+        \end{itemize}
+
+    \item Second, there are several future directions for empirical research.
+        \begin{itemize}
+        \setlength{\itemsep}{0.7em}
+            \item The number effect, verified by numerous numerical studies, suggests that as the number of competitors increases, the market price determined by Q-learning tends to decrease. When the number of firms reaches $10$, the learned price converges to the static Nash Equilibrium price (\cite{hettich2021algorithmic}). \cite{wieting2021algorithms} provides some empirical evidence for this effect, but their works only reveal relation rather than causation. Future research could consider identifying the number effect.
+            \item As discussed in Subsection \ref{subsec:impact}, some analytical and numerical studies indicate that the market structure can influence the occurrence of algorithmic collusion. Future empirical research could focus on the mutual impact between the market structure and algorithmic collusion.
+            \item Current empirical research has identified instances of algorithmic collusion, but the algorithms in these studies are not necessarily RL algorithms. Future research could leverage data with higher granularity to impact the impact of RL on market prices.
+        \end{itemize}
+
+    \item Thirdly, there is a need for more theoretical research.
+        \begin{itemize}
+        \setlength{\itemsep}{0.7em}
+            \item We need a more rigorous framework to define genuine collusion, as illustrated in \ref{subsec:rigorous}. The current framework does not provide a clear definition of the `deviation' behavior, it just vaguely claims that deviation is a subset of alternative algorithms.  
+            
+            Much of the analytical modeling research has focused on whether algorithmic collusion occurs by examining whether there exists a theoretical SPNE or MPE that supports the collusion (\cite{yang2023regulating}, \cite{miklos2019collusion}). However, the absence of a collusive equilibrium does not suggest there is no potential for algorithmic collusion (see \ref{subsec:remark} for more details.). It's important to have a framework that unifies the gap between the observed collusion and theoretical collusion.
+            \item Future work could aim to provide more robust proofs of the convergence of Reinforcement Learning algorithms to collusive outcomes.
+            \item \cite{meylahn2022learning} and \cite{loots2023data} present authentic collusive algorithms for duopoly markets; future research could explore the authentic collusive algorithms in oligopoly settings. Besides, current authentic collusive algorithms need to infer the opponent's demand information; future research could design collusive algorithms without relying on this channel.
+        \end{itemize}
+
+    \item Research on the regulating aspect is lacking. Although in settings where a platform acts as an intermediary to determine which products are accessible to consumers, there are relatively practical solutions to deter algorithmic collusion (\cite{johnson2023platform}); However, in settings where products are directly accessible to consumers without platform filtration, regulatory measures have a huge potential to be investigated (\cite{harrington2018developing}, \cite{abada2023artificial}, \cite{hartline2024regulation}). 
+
+    The development of more practical regulations against algorithmic collusion is imperative. Future research should investigate countermeasures against authentic collusive algorithms, including the composite SPSA (\cite{meylahn2022learning}). 
+        
+    \item Finally, there is a huge potential for research in the field of platform operations management and information systems.
+        \begin{itemize}
+        \setlength{\itemsep}{0.7em}
+            \item \cite{johnson2023platform} and \cite{xu2023algorithmic} have examined the scenario where sellers employ Q-learning algorithms to price, and the platform determines which products to recommend to consumers. The recommender systems described in these papers may be more accurately modeled by assortment optimization problems in the OM literature. An emerging question is: under the current assortment optimization model, what will the market dynamics converge to when sellers use RL algorithms to price? Will the traditional assortment optimization scheme mitigate algorithmic collusion, or will it lead to `meta-collusion'? 
+            
+            Besides, the platform's payoff function may not solely be the commission rate from total transactions, but may also include a measure of social welfare\footnote{See Equation 3 in \cite{johnson2023platform}}. Solving the optimal assortment under these constraints for the platform is an intriguing question for future research.
+            
+            Furthermore, platforms may not solely rely on assortment recommendation systems. In many cases, the platform has the ability to design coupons for different products. Future studies could devise the optimal coupon distribution strategy or explore alternative market structure modifications to improve platform payoffs and social welfare. 
+
+            \item Information Systems (IS) study the interaction between IT artifacts and human beings and can be categorized into \textit{behavioral science} and \textit{design science}. As an IT artifact, AI pricing algorithms can be further investigated using IS methodologies from two perspectives: behavioral science to understand how algorithmic collusion shapes user behavior; and design science to devise a safe and practical pricing scheme for competitors.
+        \end{itemize}
+\end{enumerate}
+
+\bibliography{reference}
+\end{document}
